@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { saveSnapshot, getSnapshots } from '$lib/server/storage';
 import { snapshotCount } from '$lib/server/metrics';
-import type { LogEntry } from '$lib/server/docker';
+import { CreateSnapshotRequestSchema } from '$lib/schemas/snapshot';
 
 export const GET: RequestHandler = async () => {
 	const snapshots = getSnapshots();
@@ -11,13 +11,14 @@ export const GET: RequestHandler = async () => {
 };
 
 export const POST: RequestHandler = async ({ request }) => {
-	const body = (await request.json()) as { name: string; logs: LogEntry[] };
-	const { name, logs } = body;
+	const body = await request.json();
 
-	if (!name || !logs || !Array.isArray(logs)) {
-		return json({ error: 'Invalid request body' }, { status: 400 });
+	const result = CreateSnapshotRequestSchema.safeParse(body);
+	if (!result.success) {
+		return json({ error: result.error.issues[0]?.message || 'Invalid request body' }, { status: 400 });
 	}
 
+	const { name, logs } = result.data;
 	const id = saveSnapshot(name, logs);
 	snapshotCount.inc();
 

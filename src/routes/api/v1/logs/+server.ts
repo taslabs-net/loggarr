@@ -1,6 +1,8 @@
 import type { RequestHandler } from './$types';
 import { streamAllLogs, type LogEntry, type LogLevel } from '$lib/server/docker';
-import { logsReceived, activeConnections } from '$lib/server/metrics';
+import { logsReceived, logsFiltered, activeConnections, bufferSize } from '$lib/server/metrics';
+
+let currentBufferSize = 0;
 
 export const GET: RequestHandler = async ({ request }) => {
 	const url = new URL(request.url);
@@ -20,6 +22,8 @@ export const GET: RequestHandler = async ({ request }) => {
 			const send = (data: LogEntry) => {
 				const json = JSON.stringify(data);
 				controller.enqueue(encoder.encode(`data: ${json}\n\n`));
+				currentBufferSize++;
+				bufferSize.set(currentBufferSize);
 			};
 
 			try {
@@ -27,6 +31,7 @@ export const GET: RequestHandler = async ({ request }) => {
 					logsReceived.inc({ container: entry.container, level: entry.level });
 
 					if (allowedLevels && !allowedLevels.includes(entry.level)) {
+						logsFiltered.inc({ level: entry.level });
 						continue;
 					}
 

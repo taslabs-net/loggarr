@@ -19,7 +19,7 @@
 
 	async function fetchContainers() {
 		try {
-			const response = await fetch('/api/containers');
+			const response = await fetch('/api/v1/containers');
 			if (response.ok) {
 				containers = await response.json();
 				// Auto-select all running containers on first load
@@ -35,7 +35,7 @@
 	function connect() {
 		const containerIds = Array.from(selectedContainers);
 		const queryString = containerIds.length > 0 ? `?containers=${containerIds.join(',')}` : '';
-		eventSource = new EventSource(`/api/logs${queryString}`);
+		eventSource = new EventSource(`/api/v1/logs${queryString}`);
 
 		eventSource.onopen = () => {
 			connected = true;
@@ -67,7 +67,7 @@
 		if (!snapshotName.trim()) return;
 
 		try {
-			const response = await fetch('/api/snapshots', {
+			const response = await fetch('/api/v1/snapshots', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ name: snapshotName.trim(), logs: logsToSave })
