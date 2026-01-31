@@ -12,7 +12,7 @@ COPY svelte.config.js vite.config.ts tsconfig.json ./
 COPY src ./src
 COPY static ./static
 RUN pnpm build
-RUN pnpm prune --prod
+RUN pnpm prune --prod --ignore-scripts
 
 # Runtime layer - minimal
 FROM node:25-slim AS runtime
