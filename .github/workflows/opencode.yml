@@ -26,6 +26,7 @@ jobs:
         endsWith(github.event.comment.body, ' /opencode')
       )
     runs-on: self-hosted
+    timeout-minutes: 5
     permissions:
       id-token: write
       contents: read
