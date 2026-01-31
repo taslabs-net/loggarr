@@ -16,6 +16,7 @@ RUN pnpm prune --prod --ignore-scripts
 
 # Runtime layer - minimal
 FROM node:25-slim AS runtime
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 ENV NODE_ENV=production
