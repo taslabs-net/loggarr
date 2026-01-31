@@ -1,0 +1,20 @@
+services:
+  loggarr:
+    image: ghcr.io/taslabs-net/loggarr:latest
+    ports:
+      - '9797:9797'
+      - '9091:9091'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./data:/app/data
+    environment:
+      - PORT=9797
+      - METRICS_PORT=9091
+      - LOG_BUFFER_SIZE=100
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:9797/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped

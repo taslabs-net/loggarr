@@ -9,20 +9,42 @@ Thanks for your interest in contributing to Loggarr!
 git clone https://github.com/taslabs-net/loggarr.git
 cd loggarr
 
-# Build the Docker image
-docker build -t loggarr .
+# Install dependencies
+pnpm install
 
-# Run locally
-docker run -p 8080:8080 loggarr
+# Start dev server
+pnpm dev
 ```
 
-## Development
+## Development Commands
 
-We use jj (Jujutsu) for version control. If you're using git, commits will still work.
+```bash
+pnpm dev          # Start dev server
+pnpm build        # Build for production
+pnpm preview      # Preview production build
+pnpm typecheck    # Run TypeScript checks
+pnpm lint         # Run ESLint
+pnpm format       # Format with Prettier
+pnpm test         # Run tests
+```
+
+## Docker
+
+```bash
+# Build image
+docker build -t loggarr .
+
+# Run with docker-compose
+docker compose up
+```
+
+## Version Control
+
+We use jj (Jujutsu) for version control. Git commands work too.
 
 ## Code Standards
 
-- Follow [Conventional Commits](https://www.conventionalcommits.org/) for commit messages
+- Follow [Conventional Commits](https://www.conventionalcommits.org/)
 - Keep code modular and easy to troubleshoot
 - Separate concerns - split by responsibility, not convenience
 - No dead code - remove unused code, don't comment it out
@@ -32,7 +54,7 @@ We use jj (Jujutsu) for version control. If you're using git, commits will still
 
 1. Fork the repo and create a feature branch
 2. Make your changes
-3. Ensure CI passes (lint, test, build)
+3. Ensure CI passes (typecheck, lint, format, test, build)
 4. Submit a PR with a clear description
 
 ## Questions?

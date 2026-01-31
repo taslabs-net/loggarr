@@ -33,10 +33,11 @@ Loggarr is a simple Docker log viewer that streams logs from the Docker socket.
 
 - Stream logs from Docker socket (`/var/run/docker.sock`)
 - Pause/resume log streaming
-- Save snapshots of paused state
-- Configurable line buffer (default 100, max 1000)
+- Save snapshots of paused state (persisted to SQLite)
+- Configurable line buffer (default 100, max 1000) - memory only, not persisted
 - Filter by log level: alert, error, warning, info, debug
-- SQLite for local storage (snapshots, config)
+- SQLite for saved snapshots and configuration only
+- Prometheus metrics export (port 9091)
 
 ### Technical Decisions
 

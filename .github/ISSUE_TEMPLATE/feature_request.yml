@@ -1,12 +1,28 @@
 name: Feature Request
 description: Suggest an improvement or new feature
-title: "[Feature]: "
-labels: ["enhancement"]
+title: '[Feature]: '
+labels: ['enhancement']
 body:
   - type: markdown
     attributes:
       value: |
-        Have an idea to improve Loggarr? We'd love to hear it!
+        Have an idea to improve Loggarr?
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: What part of Loggarr does this relate to?
+      options:
+        - Log streaming
+        - Filtering
+        - Snapshots
+        - UI/UX
+        - Database/Storage
+        - Performance
+        - Other
+    validations:
+      required: true
 
   - type: textarea
     id: description
@@ -21,7 +37,7 @@ body:
     id: use-case
     attributes:
       label: Use Case
-      description: Why would this be useful? Who would benefit?
+      description: Why would this be useful?
       placeholder: Explain the problem this would solve...
     validations:
       required: true
