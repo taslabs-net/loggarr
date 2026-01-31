@@ -75,13 +75,6 @@ pnpm lint         # ESLint
 pnpm test         # Run tests
 ```
 
-## Roadmap
-
-- [ ] Support for external databases (PostgreSQL, MySQL)
-- [ ] Container filtering
-- [ ] Log search
-- [ ] Export to file
-
 ## License
 
 MIT

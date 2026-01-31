@@ -1,12 +1,15 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 	import LogViewer from '$lib/components/LogViewer.svelte';
-	import type { LogEntry } from '$lib/types';
+	import type { LogEntry, ContainerSummary } from '$lib/types';
 	import { env } from '$env/dynamic/public';
 
 	const bufferSize = parseInt(env.PUBLIC_LOG_BUFFER_SIZE || '100', 10);
 
 	let logs = $state<LogEntry[]>([]);
+	let containers = $state<ContainerSummary[]>([]);
+	let selectedContainers = new SvelteSet<string>();
 	let eventSource: EventSource | null = $state(null);
 	let connected = $state(false);
 	let error = $state<string | null>(null);
@@ -14,8 +17,25 @@
 	let showSnapshotDialog = $state(false);
 	let logsToSave = $state<LogEntry[]>([]);
 
+	async function fetchContainers() {
+		try {
+			const response = await fetch('/api/containers');
+			if (response.ok) {
+				containers = await response.json();
+				// Auto-select all running containers on first load
+				if (selectedContainers.size === 0) {
+					containers.filter((c) => c.state === 'running').forEach((c) => selectedContainers.add(c.id));
+				}
+			}
+		} catch (err) {
+			console.error('Failed to fetch containers:', err);
+		}
+	}
+
 	function connect() {
-		eventSource = new EventSource('/api/logs');
+		const containerIds = Array.from(selectedContainers);
+		const queryString = containerIds.length > 0 ? `?containers=${containerIds.join(',')}` : '';
+		eventSource = new EventSource(`/api/logs${queryString}`);
 
 		eventSource.onopen = () => {
 			connected = true;
@@ -68,7 +88,15 @@
 		showSnapshotDialog = true;
 	}
 
-	onMount(() => {
+	function handleContainerFilterChange() {
+		// Clear logs and reconnect with new filter
+		logs = [];
+		disconnect();
+		connect();
+	}
+
+	onMount(async () => {
+		await fetchContainers();
 		connect();
 	});
 
@@ -94,7 +122,7 @@
 		{#if error}
 			<div class="error-banner">{error}</div>
 		{/if}
-		<LogViewer {logs} onSaveSnapshot={handleSaveSnapshot} />
+		<LogViewer {logs} {containers} {selectedContainers} onSaveSnapshot={handleSaveSnapshot} onContainerFilterChange={handleContainerFilterChange} />
 	</main>
 </div>
 

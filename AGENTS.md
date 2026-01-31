@@ -73,11 +73,6 @@ loggarr/
 └── tests/
 ```
 
-## Project Management
-
-- **Linear Project**: [Loggarr](https://linear.app/schenanigans/project/loggarr-e29b6227b714)
-- **Team**: Schenanigans
-
 ## Documentation References
 
 ### SvelteKit

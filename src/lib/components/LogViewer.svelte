@@ -1,19 +1,23 @@
 <script lang="ts">
 	import { SvelteSet } from 'svelte/reactivity';
-	import type { LogEntry, LogLevel } from '$lib/types';
+	import type { LogEntry, LogLevel, ContainerSummary } from '$lib/types';
 
 	interface Props {
 		logs: LogEntry[];
+		containers: ContainerSummary[];
+		selectedContainers: SvelteSet<string>;
 		onSaveSnapshot?: (logs: LogEntry[]) => void;
+		onContainerFilterChange?: () => void;
 	}
 
-	let { logs, onSaveSnapshot }: Props = $props();
+	let { logs, containers, selectedContainers, onSaveSnapshot, onContainerFilterChange }: Props = $props();
 
 	let paused = $state(false);
 	let pausedLogs = $state<LogEntry[]>([]);
 	let filterLevels = new SvelteSet<LogLevel>(['alert', 'error', 'warning', 'info', 'debug']);
 	let autoScroll = $state(true);
 	let logContainer: HTMLElement | null = $state(null);
+	let showContainerDropdown = $state(false);
 
 	const displayLogs = $derived(paused ? pausedLogs : logs);
 	const filteredLogs = $derived(displayLogs.filter((log) => filterLevels.has(log.level)));
@@ -42,6 +46,27 @@
 	function disableAllLevels() {
 		filterLevels.clear();
 	}
+
+	function toggleContainer(containerId: string) {
+		if (selectedContainers.has(containerId)) {
+			selectedContainers.delete(containerId);
+		} else {
+			selectedContainers.add(containerId);
+		}
+		onContainerFilterChange?.();
+	}
+
+	function selectAllContainers() {
+		containers.forEach((c) => selectedContainers.add(c.id));
+		onContainerFilterChange?.();
+	}
+
+	function deselectAllContainers() {
+		selectedContainers.clear();
+		onContainerFilterChange?.();
+	}
+
+	const runningContainers = $derived(containers.filter((c) => c.state === 'running'));
 
 	function handleSaveSnapshot() {
 		if (onSaveSnapshot && paused) {
@@ -79,6 +104,33 @@
 			</button>
 			{#if paused}
 				<button class="control-btn save" onclick={handleSaveSnapshot}>Save Snapshot</button>
+			{/if}
+		</div>
+
+		<div class="container-filter">
+			<button class="control-btn dropdown-toggle" onclick={() => (showContainerDropdown = !showContainerDropdown)}>
+				Containers ({selectedContainers.size}/{runningContainers.length})
+				<span class="dropdown-arrow">{showContainerDropdown ? '▲' : '▼'}</span>
+			</button>
+			{#if showContainerDropdown}
+				<div class="dropdown-menu">
+					<div class="dropdown-header">
+						<button class="dropdown-action" onclick={selectAllContainers}>All</button>
+						<button class="dropdown-action" onclick={deselectAllContainers}>None</button>
+					</div>
+					<div class="dropdown-list">
+						{#each runningContainers as container (container.id)}
+							<label class="dropdown-item">
+								<input type="checkbox" checked={selectedContainers.has(container.id)} onchange={() => toggleContainer(container.id)} />
+								<span class="container-name" title={container.name}>{container.name}</span>
+								<span class="container-image" title={container.image}>{container.image}</span>
+							</label>
+						{/each}
+						{#if runningContainers.length === 0}
+							<div class="dropdown-empty">No running containers</div>
+						{/if}
+					</div>
+				</div>
 			{/if}
 		</div>
 
@@ -203,6 +255,105 @@
 	.filter-toggle:hover {
 		background: var(--bg-hover);
 		color: var(--text-primary);
+	}
+
+	.container-filter {
+		position: relative;
+	}
+
+	.dropdown-toggle {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.dropdown-arrow {
+		font-size: 0.6rem;
+	}
+
+	.dropdown-menu {
+		position: absolute;
+		top: 100%;
+		left: 0;
+		margin-top: 0.25rem;
+		min-width: 280px;
+		max-height: 300px;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: 4px;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+		z-index: 50;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.dropdown-header {
+		display: flex;
+		gap: 0.5rem;
+		padding: 0.5rem;
+		border-bottom: 1px solid var(--border-color);
+	}
+
+	.dropdown-action {
+		padding: 0.25rem 0.5rem;
+		border: 1px solid var(--border-color);
+		background: var(--bg-primary);
+		color: var(--text-secondary);
+		cursor: pointer;
+		border-radius: 4px;
+		font-size: 0.7rem;
+		text-transform: uppercase;
+	}
+
+	.dropdown-action:hover {
+		background: var(--bg-hover);
+		color: var(--text-primary);
+	}
+
+	.dropdown-list {
+		overflow-y: auto;
+		flex: 1;
+	}
+
+	.dropdown-item {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.5rem;
+		cursor: pointer;
+		font-size: 0.8125rem;
+	}
+
+	.dropdown-item:hover {
+		background: var(--bg-hover);
+	}
+
+	.dropdown-item input[type='checkbox'] {
+		cursor: pointer;
+	}
+
+	.container-name {
+		color: var(--color-accent);
+		flex-shrink: 0;
+		max-width: 120px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.container-image {
+		color: var(--text-secondary);
+		font-size: 0.75rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.dropdown-empty {
+		padding: 1rem;
+		text-align: center;
+		color: var(--text-secondary);
+		font-size: 0.8125rem;
 	}
 
 	.auto-scroll {

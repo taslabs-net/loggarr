@@ -80,8 +80,12 @@ export async function getRunningContainers(): Promise<ContainerInfo[]> {
 	return docker.listContainers({ filters: { status: ['running'] } });
 }
 
-export async function* streamAllLogs(signal?: AbortSignal): AsyncGenerator<LogEntry> {
-	const containers = await getRunningContainers();
+export async function* streamAllLogs(signal?: AbortSignal, containerIds?: string[]): AsyncGenerator<LogEntry> {
+	let containers = await getRunningContainers();
+
+	if (containerIds && containerIds.length > 0) {
+		containers = containers.filter((c) => containerIds.includes(c.Id) || containerIds.includes(c.Names[0]?.replace(/^\//, '') || ''));
+	}
 
 	const streams: { container: ContainerInfo; stream: NodeJS.ReadableStream }[] = [];
 

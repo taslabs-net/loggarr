@@ -5,7 +5,9 @@ import { logsReceived, activeConnections } from '$lib/server/metrics';
 export const GET: RequestHandler = async ({ request }) => {
 	const url = new URL(request.url);
 	const levelsParam = url.searchParams.get('levels');
+	const containersParam = url.searchParams.get('containers');
 	const allowedLevels: LogLevel[] | null = levelsParam ? (levelsParam.split(',') as LogLevel[]) : null;
+	const containerIds: string[] | undefined = containersParam ? containersParam.split(',') : undefined;
 
 	const abortController = new AbortController();
 
@@ -21,7 +23,7 @@ export const GET: RequestHandler = async ({ request }) => {
 			};
 
 			try {
-				for await (const entry of streamAllLogs(abortController.signal)) {
+				for await (const entry of streamAllLogs(abortController.signal, containerIds)) {
 					logsReceived.inc({ container: entry.container, level: entry.level });
 
 					if (allowedLevels && !allowedLevels.includes(entry.level)) {
