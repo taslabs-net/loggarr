@@ -11,6 +11,8 @@ node_modules/
 /.svelte-kit
 /build
 dist/
+/loggarr
+/tmp
 
 # Runtime data
 /data/
@@ -28,6 +30,7 @@ dist/
 
 # Logs
 *.log
+build-errors.log
 
 # Testing and coverage
 coverage/

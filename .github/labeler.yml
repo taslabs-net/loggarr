@@ -4,59 +4,51 @@
 documentation:
   - changed-files:
       - any-glob-to-any-file:
-          - '**/*.md'
-          - 'docs/**/*'
+          - "**/*.md"
+          - "docs/**/*"
 
 docker:
   - changed-files:
       - any-glob-to-any-file:
-          - 'Dockerfile'
-          - 'Dockerfile.*'
-          - 'docker-compose*.yml'
-          - '.dockerignore'
+          - "Dockerfile"
+          - "Dockerfile.*"
+          - "docker-compose*.yml"
+          - ".dockerignore"
 
 config:
   - changed-files:
       - any-glob-to-any-file:
-          - '*.toml'
-          - '*.yaml'
-          - '*.yml'
-          - '*.json'
-          - '!package*.json'
-          - '!docker-compose*.yml'
+          - "*.toml"
+          - "*.yaml"
+          - "*.yml"
+          - "*.json"
+          - "!package*.json"
+          - "!docker-compose*.yml"
 
 source:
   - changed-files:
       - any-glob-to-any-file:
-          - 'src/**/*'
-          - 'lib/**/*'
-          - 'pkg/**/*'
+          - "cmd/**/*"
+          - "internal/**/*"
+          - "pkg/**/*"
 
 dependencies:
   - changed-files:
       - any-glob-to-any-file:
-          - 'package.json'
-          - 'package-lock.json'
-          - 'pnpm-lock.yaml'
-          - 'yarn.lock'
-          - 'go.mod'
-          - 'go.sum'
-          - 'Cargo.toml'
-          - 'Cargo.lock'
-          - 'requirements.txt'
-          - 'pyproject.toml'
+          - "go.mod"
+          - "go.sum"
 
 ci:
   - changed-files:
       - any-glob-to-any-file:
-          - '.github/**/*'
+          - ".github/**/*"
 
 tests:
   - changed-files:
       - any-glob-to-any-file:
-          - '**/*_test.*'
-          - '**/*.test.*'
-          - '**/*_spec.*'
-          - '**/*.spec.*'
-          - 'tests/**/*'
-          - '__tests__/**/*'
+          - "**/*_test.*"
+          - "**/*.test.*"
+          - "**/*_spec.*"
+          - "**/*.spec.*"
+          - "tests/**/*"
+          - "__tests__/**/*"

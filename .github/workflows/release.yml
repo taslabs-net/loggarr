@@ -5,22 +5,17 @@ on:
     branches:
       - main
     paths-ignore:
-      - '*.md'
-      - 'docs/**'
-      - 'LICENSE'
-      - '.gitignore'
-      - '.github/*.md'
-      - '.github/ISSUE_TEMPLATE/**'
-      - '.github/labeler.yml'
-      - '.github/dependabot.yml'
-      - 'compose.yaml'
-      - '.env.example'
-      - '.prettierrc'
-      - '.prettierignore'
-      - '.npmrc'
-      - '.husky/**'
-      - 'cliff.toml'
-      - 'eslint.config.js'
+      - "*.md"
+      - "docs/**"
+      - "LICENSE"
+      - ".gitignore"
+      - ".github/*.md"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/labeler.yml"
+      - ".github/dependabot.yml"
+      - "compose.yaml"
+      - ".env.example"
+      - "cliff.toml"
 
 permissions:
   contents: write
@@ -40,10 +35,10 @@ jobs:
         id: version
         uses: paulhatch/semantic-version@v6.0.1
         with:
-          tag_prefix: 'v'
-          major_pattern: '/!:|BREAKING CHANGE:/'
+          tag_prefix: "v"
+          major_pattern: "/!:|BREAKING CHANGE:/"
           minor_pattern: '/feat(\(.+\))?:/'
-          version_format: '${major}.${minor}.${patch}'
+          version_format: "${major}.${minor}.${patch}"
 
       - name: Check if tag exists
         id: check_tag
@@ -64,14 +59,12 @@ jobs:
         env:
           OUTPUT: CHANGELOG.md
 
-      - name: Update package.json version
+      - name: Commit version bump
         if: steps.check_tag.outputs.exists == 'false'
         run: |
-          npm version ${{ steps.version.outputs.version }} --no-git-tag-version --allow-same-version
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add package.json
-          git commit -m "chore: bump version to ${{ steps.version.outputs.version }}" || true
+          git commit --allow-empty -m "chore: bump version to ${{ steps.version.outputs.version }}"
           git push
 
       - name: Setup
@@ -102,6 +95,8 @@ jobs:
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=v${{ steps.version.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

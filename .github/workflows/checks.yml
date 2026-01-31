@@ -8,52 +8,26 @@ permissions:
 
 jobs:
   checks:
-    name: Lint, Type, Test
+    name: Build & Test
     runs-on: self-hosted
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup PATH
+        run: echo "/usr/local/go/bin" >> $GITHUB_PATH
 
-      - name: Prettier
-        run: |
-          set -o pipefail
-          echo "## Prettier Results" >> $GITHUB_STEP_SUMMARY
-          if pnpm format:check 2>&1 | tee output.txt; then
-            echo "No formatting issues" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "Formatting issues detected:" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            cat output.txt >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            exit 1
-          fi
+      - name: Generate templates
+        run: templ generate
 
-      - name: ESLint
+      - name: Build
         run: |
-          set -o pipefail
-          echo "## ESLint Results" >> $GITHUB_STEP_SUMMARY
-          if pnpm lint 2>&1 | tee output.txt; then
-            echo "No linting errors" >> $GITHUB_STEP_SUMMARY
+          echo "## Build Results" >> $GITHUB_STEP_SUMMARY
+          if go build -o loggarr ./cmd/loggarr 2>&1 | tee output.txt; then
+            echo "Build successful" >> $GITHUB_STEP_SUMMARY
           else
-            echo "Linting errors detected:" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            cat output.txt >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            exit 1
-          fi
-
-      - name: TypeCheck
-        run: |
-          set -o pipefail
-          echo "## TypeCheck Results" >> $GITHUB_STEP_SUMMARY
-          if pnpm typecheck 2>&1 | tee output.txt; then
-            echo "No type errors" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "Type errors detected:" >> $GITHUB_STEP_SUMMARY
+            echo "Build failed:" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
             cat output.txt >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
@@ -62,12 +36,24 @@ jobs:
 
       - name: Test
         run: |
-          set -o pipefail
           echo "## Test Results" >> $GITHUB_STEP_SUMMARY
-          if pnpm test 2>&1 | tee output.txt; then
+          if go test -v ./... 2>&1 | tee output.txt; then
             echo "All tests passed" >> $GITHUB_STEP_SUMMARY
           else
             echo "Test failures:" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat output.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+      - name: Vet
+        run: |
+          echo "## Vet Results" >> $GITHUB_STEP_SUMMARY
+          if go vet ./... 2>&1 | tee output.txt; then
+            echo "No issues found" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Issues found:" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
             cat output.txt >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
