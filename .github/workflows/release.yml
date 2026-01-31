@@ -4,6 +4,23 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.github/*.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/labeler.yml'
+      - '.github/dependabot.yml'
+      - 'compose.yaml'
+      - '.env.example'
+      - '.prettierrc'
+      - '.prettierignore'
+      - '.npmrc'
+      - '.husky/**'
+      - 'cliff.toml'
+      - 'eslint.config.js'
 
 permissions:
   contents: write
