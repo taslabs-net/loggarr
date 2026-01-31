@@ -37,6 +37,16 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Generate changelog
+        if: steps.check_tag.outputs.exists == 'false'
+        id: changelog
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --unreleased --strip header
+        env:
+          OUTPUT: CHANGELOG.md
+
       - name: Update package.json version
         if: steps.check_tag.outputs.exists == 'false'
         run: |
@@ -77,16 +87,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Generate changelog
-        if: steps.check_tag.outputs.exists == 'false'
-        id: changelog
-        uses: orhun/git-cliff-action@v4
-        with:
-          config: cliff.toml
-          args: --latest --strip header
-        env:
-          OUTPUT: CHANGELOG.md
 
       - name: Create release
         if: steps.check_tag.outputs.exists == 'false'
