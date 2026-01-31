@@ -1,7 +1,7 @@
 # Build tools layer - cached separately
 FROM node:25-alpine AS base
 RUN apk add --no-cache python3 make g++
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN npm install -g pnpm
 
 # Dependencies layer - cached when lockfile unchanged
 FROM base AS deps
