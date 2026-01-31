@@ -1,0 +1,59 @@
+name: PR Labeler
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label:
+    name: Auto-label PR
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Label PR by files
+        id: labeler
+        uses: actions/labeler@v6
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          configuration-path: .github/labeler.yml
+
+      - name: Label PR by size
+        run: |
+          ADDITIONS=${{ github.event.pull_request.additions }}
+          DELETIONS=${{ github.event.pull_request.deletions }}
+          TOTAL=$((ADDITIONS + DELETIONS))
+
+          # Remove existing size labels
+          gh pr edit "$PR_NUMBER" --remove-label "size/xs,size/s,size/m,size/l,size/xl" 2>/dev/null || true
+
+          # Add appropriate size label
+          if [ $TOTAL -lt 10 ]; then
+            LABEL="size/xs"
+          elif [ $TOTAL -lt 50 ]; then
+            LABEL="size/s"
+          elif [ $TOTAL -lt 200 ]; then
+            LABEL="size/m"
+          elif [ $TOTAL -lt 500 ]; then
+            LABEL="size/l"
+          else
+            LABEL="size/xl"
+          fi
+
+          gh pr edit "$PR_NUMBER" --add-label "$LABEL"
+          echo "Added label: $LABEL ($TOTAL lines changed)"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+
+      - name: Summary
+        run: |
+          echo "## PR Labeler Results" >> $GITHUB_STEP_SUMMARY
+          echo "Labels applied based on changed files and PR size." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See [labeler.yml](.github/labeler.yml) for file-based label rules." >> $GITHUB_STEP_SUMMARY

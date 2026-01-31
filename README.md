@@ -1,0 +1,59 @@
+# Loggarr
+
+A simple Docker log viewer. Streams logs from the Docker socket with basic filtering and capture capabilities.
+
+## Features
+
+- **Stream logs** from all Docker containers via the Docker socket
+- **Pause/Resume** log streaming
+- **Save snapshots** of paused log state
+- **Capture history** - configurable line buffer (default: 100, max: 1000)
+- **Filter by log level** - alert, error, warning, info, debug
+- **SQLite storage** for snapshots and configuration
+
+## Quick Start
+
+```bash
+docker run -d \
+  -p 8080:8080 \
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  ghcr.io/taslabs-net/loggarr:latest
+```
+
+Then open `http://localhost:8080` in your browser.
+
+## Configuration
+
+| Environment Variable | Default | Description |
+|---------------------|---------|-------------|
+| `PORT` | `8080` | Web UI port |
+| `LOG_BUFFER_SIZE` | `100` | Number of lines to keep in memory |
+| `LOG_BUFFER_MAX` | `1000` | Maximum configurable buffer size |
+
+## Requirements
+
+- Docker socket access (`/var/run/docker.sock`)
+- Read-only access is sufficient
+
+## Platforms
+
+- `linux/amd64`
+- `linux/arm64`
+
+## Tech Stack
+
+- **Frontend**: Svelte (SvelteKit)
+- **Backend**: Node.js
+- **Database**: SQLite (PostgreSQL/MySQL planned)
+- **Real-time**: WebSocket/SSE
+
+## Roadmap
+
+- [ ] Support for external databases (PostgreSQL, MySQL)
+- [ ] Container filtering
+- [ ] Log search
+- [ ] Export to file
+
+## License
+
+MIT

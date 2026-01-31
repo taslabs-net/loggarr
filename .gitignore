@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+dist/
+build/
+out/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# IDE and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Testing and coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# Cache
+.cache/
+*.cache
+.eslintcache
+.prettiercache
+
+# Docker
+docker-compose.override.yml
+
+# OS files
+Thumbs.db

@@ -1,0 +1,51 @@
+# Git
+.git/
+.gitignore
+.jj/
+
+# GitHub
+.github/
+
+# Documentation
+*.md
+!README.md
+LICENSE
+
+# IDE and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Dependencies (will be installed in container)
+node_modules/
+vendor/
+
+# Build artifacts
+dist/
+build/
+coverage/
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/
+
+# Development files
+docker-compose.override.yml
+*.test.*
+*.spec.*
+__tests__/
+tests/
