@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Documentation
+    url: https://github.com/taslabs-net/loggarr#readme
+    about: Check the README for setup and configuration.
   - name: Discussions
     url: https://github.com/taslabs-net/loggarr/discussions
     about: Have a question? Start a discussion first.

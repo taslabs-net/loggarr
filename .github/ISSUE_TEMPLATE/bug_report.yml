@@ -1,12 +1,12 @@
 name: Bug Report
 description: Report an issue or unexpected behavior
-title: "[Bug]: "
-labels: ["bug"]
+title: '[Bug]: '
+labels: ['bug']
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to report a bug! Please fill out the form below.
+        Thanks for taking the time to report a bug!
 
   - type: textarea
     id: description
@@ -23,9 +23,25 @@ body:
       label: Steps to Reproduce
       description: How can we reproduce this issue?
       placeholder: |
-        1. Run '...'
-        2. Configure '...'
+        1. Start Loggarr with '...'
+        2. Filter by '...'
         3. See error
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: What part of Loggarr is affected?
+      options:
+        - Log streaming
+        - Filtering
+        - Pause/Resume
+        - Snapshots
+        - UI
+        - Docker connection
+        - Other
     validations:
       required: true
 
@@ -35,9 +51,10 @@ body:
       label: Environment
       description: Relevant environment details
       placeholder: |
+        - Loggarr version:
         - Docker version:
-        - OS:
-        - Loggarr version/tag:
+        - Host OS:
+        - Browser (if UI issue):
     validations:
       required: true
 

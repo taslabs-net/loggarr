@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       dryRun:
-        description: "Log actions without making changes"
+        description: 'Log actions without making changes'
         type: boolean
         default: false
   schedule:
-    - cron: "0 6 * * *"
+    - cron: '0 6 * * *'
 
 permissions:
   contents: read
@@ -29,17 +29,17 @@ jobs:
             const STALE_LABEL = 'stale'
             const { owner, repo } = context.repo
             const dryRun = context.payload.inputs?.dryRun === "true"
-            
+
             const warningCutoff = new Date(Date.now() - DAYS_WARNING * 24 * 60 * 60 * 1000)
             const closeCutoff = new Date(Date.now() - DAYS_CLOSE * 24 * 60 * 60 * 1000)
-            
+
             // Track actions for summary
             const actions = { warned: [], closed: [], reactivated: [] }
-            
+
             core.info(`Dry run mode: ${dryRun}`)
             core.info(`Warning cutoff: ${warningCutoff.toISOString()}`)
             core.info(`Close cutoff: ${closeCutoff.toISOString()}`)
-            
+
             // Process PRs
             const prs = await github.paginate(github.rest.pulls.list, {
               owner,
@@ -49,11 +49,11 @@ jobs:
               sort: "updated",
               direction: "asc",
             })
-            
+
             for (const pr of prs) {
               await processItem(pr, 'PR')
             }
-            
+
             // Process Issues
             const issues = await github.paginate(github.rest.issues.listForRepo, {
               owner,
@@ -63,14 +63,14 @@ jobs:
               sort: "updated",
               direction: "asc",
             })
-            
+
             // Filter out PRs (issues API returns PRs too)
             const actualIssues = issues.filter(i => !i.pull_request)
-            
+
             for (const issue of actualIssues) {
               await processItem(issue, 'issue')
             }
-            
+
             async function processItem(item, type) {
               const lastUpdated = new Date(item.updated_at)
               const hasStaleLabel = item.labels.some(l => l.name === STALE_LABEL)
@@ -168,11 +168,11 @@ jobs:
                 core.info(`Marked ${type} #${number} as stale`)
               }
             }
-            
+
             // Write summary
             let summary = `## Stale Issues/PRs Report\n\n`
             summary += dryRun ? `**Mode:** Dry run (no changes made)\n\n` : ``
-            
+
             if (actions.warned.length === 0 && actions.closed.length === 0 && actions.reactivated.length === 0) {
               summary += `**No stale items found**\n`
             } else {
@@ -191,5 +191,5 @@ jobs:
                 actions.reactivated.forEach(item => { summary += `- ${item}\n` })
               }
             }
-            
+
             await core.summary.addRaw(summary).write()

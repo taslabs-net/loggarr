@@ -10,6 +10,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)](https://sqlite.org)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)](https://docker.com)
+[![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?logo=prometheus&logoColor=white)](https://prometheus.io)
 
 A simple Docker log viewer. Streams logs from the Docker socket with basic filtering and capture capabilities.
 
@@ -20,26 +21,29 @@ A simple Docker log viewer. Streams logs from the Docker socket with basic filte
 - **Save snapshots** of paused log state
 - **Capture history** - configurable line buffer (default: 100, max: 1000)
 - **Filter by log level** - alert, error, warning, info, debug
-- **SQLite storage** for snapshots and configuration
+- **SQLite storage** for saved snapshots and configuration (streaming logs are memory-only)
+- **Prometheus metrics** on port 9091
+- **Health check** endpoint at `/health`
 
 ## Quick Start
 
 ```bash
 docker run -d \
-  -p 8080:8080 \
+  -p 9797:9797 \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
   ghcr.io/taslabs-net/loggarr:latest
 ```
 
-Then open `http://localhost:8080` in your browser.
+Then open `http://localhost:9797` in your browser.
 
 ## Configuration
 
-| Environment Variable | Default | Description |
-|---------------------|---------|-------------|
-| `PORT` | `8080` | Web UI port |
-| `LOG_BUFFER_SIZE` | `100` | Number of lines to keep in memory |
-| `LOG_BUFFER_MAX` | `1000` | Maximum configurable buffer size |
+| Environment Variable | Default | Description                       |
+| -------------------- | ------- | --------------------------------- |
+| `PORT`               | `9797`  | Web UI port                       |
+| `METRICS_PORT`       | `9091`  | Prometheus metrics port           |
+| `LOG_BUFFER_SIZE`    | `100`   | Number of lines to keep in memory |
+| `LOG_BUFFER_MAX`     | `1000`  | Maximum configurable buffer size  |
 
 ## Requirements
 
@@ -58,6 +62,17 @@ Then open `http://localhost:8080` in your browser.
 - **Database**: SQLite (PostgreSQL/MySQL planned)
 - **Real-time**: WebSocket/SSE
 - **Registry**: GitHub Container Registry (ghcr.io)
+
+## Development
+
+```bash
+pnpm install      # Install dependencies
+pnpm dev          # Start dev server
+pnpm build        # Build for production
+pnpm typecheck    # TypeScript checks
+pnpm lint         # ESLint
+pnpm test         # Run tests
+```
 
 ## Roadmap
 
