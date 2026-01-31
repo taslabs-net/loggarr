@@ -8,9 +8,10 @@
 		selectedContainers: SvelteSet<string>;
 		onSaveSnapshot?: (logs: LogEntry[]) => void;
 		onContainerFilterChange?: () => void;
+		readonly?: boolean;
 	}
 
-	let { logs, containers, selectedContainers, onSaveSnapshot, onContainerFilterChange }: Props = $props();
+	let { logs, containers, selectedContainers, onSaveSnapshot, onContainerFilterChange, readonly = false }: Props = $props();
 
 	let paused = $state(false);
 	let pausedLogs = $state<LogEntry[]>([]);
@@ -98,41 +99,43 @@
 
 <div class="log-viewer">
 	<div class="controls">
-		<div class="control-group">
-			<button class="control-btn" class:active={paused} onclick={togglePause}>
-				{paused ? 'Resume' : 'Pause'}
-			</button>
-			{#if paused}
-				<button class="control-btn save" onclick={handleSaveSnapshot}>Save Snapshot</button>
-			{/if}
-		</div>
+		{#if !readonly}
+			<div class="control-group">
+				<button class="control-btn" class:active={paused} onclick={togglePause}>
+					{paused ? 'Resume' : 'Pause'}
+				</button>
+				{#if paused}
+					<button class="control-btn save" onclick={handleSaveSnapshot}>Save Snapshot</button>
+				{/if}
+			</div>
 
-		<div class="container-filter">
-			<button class="control-btn dropdown-toggle" onclick={() => (showContainerDropdown = !showContainerDropdown)}>
-				Containers ({selectedContainers.size}/{runningContainers.length})
-				<span class="dropdown-arrow">{showContainerDropdown ? '▲' : '▼'}</span>
-			</button>
-			{#if showContainerDropdown}
-				<div class="dropdown-menu">
-					<div class="dropdown-header">
-						<button class="dropdown-action" onclick={selectAllContainers}>All</button>
-						<button class="dropdown-action" onclick={deselectAllContainers}>None</button>
+			<div class="container-filter">
+				<button class="control-btn dropdown-toggle" onclick={() => (showContainerDropdown = !showContainerDropdown)}>
+					Containers ({selectedContainers.size}/{runningContainers.length})
+					<span class="dropdown-arrow">{showContainerDropdown ? '▲' : '▼'}</span>
+				</button>
+				{#if showContainerDropdown}
+					<div class="dropdown-menu">
+						<div class="dropdown-header">
+							<button class="dropdown-action" onclick={selectAllContainers}>All</button>
+							<button class="dropdown-action" onclick={deselectAllContainers}>None</button>
+						</div>
+						<div class="dropdown-list">
+							{#each runningContainers as container (container.id)}
+								<label class="dropdown-item">
+									<input type="checkbox" checked={selectedContainers.has(container.id)} onchange={() => toggleContainer(container.id)} />
+									<span class="container-name" title={container.name}>{container.name}</span>
+									<span class="container-image" title={container.image}>{container.image}</span>
+								</label>
+							{/each}
+							{#if runningContainers.length === 0}
+								<div class="dropdown-empty">No running containers</div>
+							{/if}
+						</div>
 					</div>
-					<div class="dropdown-list">
-						{#each runningContainers as container (container.id)}
-							<label class="dropdown-item">
-								<input type="checkbox" checked={selectedContainers.has(container.id)} onchange={() => toggleContainer(container.id)} />
-								<span class="container-name" title={container.name}>{container.name}</span>
-								<span class="container-image" title={container.image}>{container.image}</span>
-							</label>
-						{/each}
-						{#if runningContainers.length === 0}
-							<div class="dropdown-empty">No running containers</div>
-						{/if}
-					</div>
-				</div>
-			{/if}
-		</div>
+				{/if}
+			</div>
+		{/if}
 
 		<div class="filter-group">
 			<button class="filter-toggle" onclick={enableAllLevels}>All</button>

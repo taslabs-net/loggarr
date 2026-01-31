@@ -2,6 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import LogViewer from '$lib/components/LogViewer.svelte';
+	import SnapshotBrowser from '$lib/components/SnapshotBrowser.svelte';
 	import type { LogEntry, ContainerSummary } from '$lib/types';
 	import { env } from '$env/dynamic/public';
 
@@ -16,6 +17,10 @@
 	let snapshotName = $state('');
 	let showSnapshotDialog = $state(false);
 	let logsToSave = $state<LogEntry[]>([]);
+
+	// Snapshot browser state
+	let showSnapshotBrowser = $state(false);
+	let viewingSnapshot = $state<{ name: string; logs: LogEntry[] } | null>(null);
 
 	async function fetchContainers() {
 		try {
@@ -95,6 +100,22 @@
 		connect();
 	}
 
+	function handleViewSnapshot(snapshotLogs: LogEntry[], name: string) {
+		// Convert timestamp strings back to Date objects
+		viewingSnapshot = {
+			name,
+			logs: snapshotLogs.map((log) => ({
+				...log,
+				timestamp: new Date(log.timestamp)
+			}))
+		};
+		showSnapshotBrowser = false;
+	}
+
+	function closeSnapshotViewer() {
+		viewingSnapshot = null;
+	}
+
 	onMount(async () => {
 		await fetchContainers();
 		connect();
@@ -106,24 +127,42 @@
 </script>
 
 <svelte:head>
-	<title>Loggarr</title>
+	<title>Loggarr{viewingSnapshot ? ` - ${viewingSnapshot.name}` : ''}</title>
 </svelte:head>
 
 <div class="app">
 	<header>
 		<h1>Loggarr</h1>
-		<div class="status">
-			<span class="status-indicator" class:connected></span>
-			{connected ? 'Connected' : 'Disconnected'}
+		<div class="header-actions">
+			{#if viewingSnapshot}
+				<span class="viewing-snapshot">Viewing: {viewingSnapshot.name}</span>
+				<button class="header-btn" onclick={closeSnapshotViewer}>Back to Live</button>
+			{:else}
+				<button class="header-btn" class:active={showSnapshotBrowser} onclick={() => (showSnapshotBrowser = !showSnapshotBrowser)}> Snapshots </button>
+				<div class="status">
+					<span class="status-indicator" class:connected></span>
+					{connected ? 'Connected' : 'Disconnected'}
+				</div>
+			{/if}
 		</div>
 	</header>
 
-	<main>
-		{#if error}
-			<div class="error-banner">{error}</div>
+	<div class="content">
+		<main>
+			{#if error && !viewingSnapshot}
+				<div class="error-banner">{error}</div>
+			{/if}
+			{#if viewingSnapshot}
+				<LogViewer logs={viewingSnapshot.logs} {containers} {selectedContainers} readonly />
+			{:else}
+				<LogViewer {logs} {containers} {selectedContainers} onSaveSnapshot={handleSaveSnapshot} onContainerFilterChange={handleContainerFilterChange} />
+			{/if}
+		</main>
+
+		{#if showSnapshotBrowser && !viewingSnapshot}
+			<SnapshotBrowser onViewSnapshot={handleViewSnapshot} onClose={() => (showSnapshotBrowser = false)} />
 		{/if}
-		<LogViewer {logs} {containers} {selectedContainers} onSaveSnapshot={handleSaveSnapshot} onContainerFilterChange={handleContainerFilterChange} />
-	</main>
+	</div>
 </div>
 
 {#if showSnapshotDialog}
@@ -191,6 +230,38 @@
 		font-weight: 600;
 	}
 
+	.header-actions {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+	}
+
+	.header-btn {
+		padding: 0.5rem 1rem;
+		border: 1px solid var(--border-color);
+		background: var(--bg-primary);
+		color: var(--text-primary);
+		cursor: pointer;
+		border-radius: 4px;
+		font-size: 0.875rem;
+	}
+
+	.header-btn:hover {
+		background: var(--bg-hover);
+	}
+
+	.header-btn.active {
+		background: var(--color-accent);
+		color: white;
+		border-color: var(--color-accent);
+	}
+
+	.viewing-snapshot {
+		font-size: 0.875rem;
+		color: var(--color-warning);
+		font-weight: 500;
+	}
+
 	.status {
 		display: flex;
 		align-items: center;
@@ -208,6 +279,12 @@
 
 	.status-indicator.connected {
 		background: var(--color-success);
+	}
+
+	.content {
+		flex: 1;
+		display: flex;
+		overflow: hidden;
 	}
 
 	main {
