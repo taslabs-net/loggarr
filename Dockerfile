@@ -21,7 +21,7 @@ RUN templ generate
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-s -w -X github.com/taslabs-net/loggarr/internal/config.Version=${VERSION}" -o loggarr ./cmd/loggarr
 
 # Runtime stage - minimal
-FROM alpine:3.21
+FROM alpine:3.23
 
 RUN apk add --no-cache ca-certificates tzdata
 
