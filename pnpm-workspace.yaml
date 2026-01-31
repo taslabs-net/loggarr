@@ -1,2 +1,6 @@
 onlyBuiltDependencies:
   - esbuild
+  - better-sqlite3
+  - cpu-features
+  - protobufjs
+  - ssh2
