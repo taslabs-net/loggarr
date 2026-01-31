@@ -1,6 +1,9 @@
-FROM node:22-slim AS builder
+FROM node:25-alpine AS builder
 
 WORKDIR /app
+
+# Build deps for native modules (better-sqlite3)
+RUN apk add --no-cache python3 make g++
 
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
@@ -11,7 +14,10 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm build
 
-FROM node:22-slim AS runtime
+# Production deps only (with native modules compiled)
+RUN pnpm prune --prod
+
+FROM node:25-alpine AS runtime
 
 WORKDIR /app
 
@@ -21,6 +27,7 @@ ENV METRICS_PORT=9091
 
 COPY --from=builder /app/build ./build
 COPY --from=builder /app/package.json ./
+COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 9797 9091
 
