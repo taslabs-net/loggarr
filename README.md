@@ -26,6 +26,9 @@ A simple Docker log viewer. Streams logs from the Docker socket with basic filte
 - **Prometheus metrics** on port 9091
 - **Health check** endpoint at `/health`
 
+<img width="1912" height="794" alt="image" src="https://github.com/user-attachments/assets/32adda50-4914-4e76-b9fd-ef471d363a32" />
+
+
 ## Quick Start
 
 ```bash
