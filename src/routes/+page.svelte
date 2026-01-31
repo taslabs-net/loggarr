@@ -22,6 +22,41 @@
 	let showSnapshotBrowser = $state(false);
 	let viewingSnapshot = $state<{ name: string; logs: LogEntry[] } | null>(null);
 
+	// Log batching - debounce updates to reduce re-renders (similar to Dozzle)
+	let pendingLogs: LogEntry[] = [];
+	let flushTimer: ReturnType<typeof setTimeout> | null = null;
+	let lastFlush = 0;
+	const DEBOUNCE_MS = 250; // debounce interval
+	const MAX_WAIT_MS = 1000; // force flush after this long
+
+	function flushLogs() {
+		if (pendingLogs.length === 0) return;
+
+		// Batch update: add all pending logs at once
+		logs = [...logs, ...pendingLogs].slice(-bufferSize);
+		pendingLogs = [];
+		flushTimer = null;
+		lastFlush = Date.now();
+	}
+
+	function queueLog(entry: LogEntry) {
+		pendingLogs.push(entry);
+
+		// Clear existing timer
+		if (flushTimer) {
+			clearTimeout(flushTimer);
+		}
+
+		// Force flush if we've waited too long (maxWait)
+		const timeSinceLastFlush = Date.now() - lastFlush;
+		if (timeSinceLastFlush >= MAX_WAIT_MS) {
+			flushLogs();
+		} else {
+			// Debounce: schedule flush
+			flushTimer = setTimeout(flushLogs, DEBOUNCE_MS);
+		}
+	}
+
 	async function fetchContainers() {
 		try {
 			const response = await fetch('/api/v1/containers');
@@ -51,7 +86,7 @@
 			const entry = JSON.parse(event.data) as LogEntry;
 			entry.timestamp = new Date(entry.timestamp);
 
-			logs = [...logs.slice(-(bufferSize - 1)), entry];
+			queueLog(entry);
 		};
 
 		eventSource.onerror = () => {
@@ -64,6 +99,14 @@
 		if (eventSource) {
 			eventSource.close();
 			eventSource = null;
+		}
+		// Clean up pending logs
+		if (flushTimer) {
+			clearTimeout(flushTimer);
+			flushTimer = null;
+		}
+		if (pendingLogs.length > 0) {
+			flushLogs(); // Flush any remaining logs
 		}
 		connected = false;
 	}

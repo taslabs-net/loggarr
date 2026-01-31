@@ -169,6 +169,7 @@
 		{#if paused}
 			<span class="paused-indicator">PAUSED</span>
 		{/if}
+		<span class="version">v{__APP_VERSION__}</span>
 	</div>
 </div>
 
@@ -429,5 +430,9 @@
 	.paused-indicator {
 		color: var(--color-warning);
 		font-weight: 600;
+	}
+
+	.version {
+		margin-left: auto;
 	}
 </style>

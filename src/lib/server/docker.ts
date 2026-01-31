@@ -87,19 +87,32 @@ export async function* streamAllLogs(signal?: AbortSignal, containerIds?: string
 		containers = containers.filter((c) => containerIds.includes(c.Id) || containerIds.includes(c.Names[0]?.replace(/^\//, '') || ''));
 	}
 
-	const streams: { container: ContainerInfo; stream: NodeJS.ReadableStream }[] = [];
+	// Establish all log streams in parallel for faster startup
+	// Use Promise.allSettled to handle partial failures gracefully
+	const streamResults = await Promise.allSettled(
+		containers.map(async (containerInfo) => {
+			const container = docker.getContainer(containerInfo.Id);
+			const logStream = await container.logs({
+				follow: true,
+				stdout: true,
+				stderr: true,
+				timestamps: false,
+				tail: 5
+			});
+			return { container: containerInfo, stream: logStream };
+		})
+	);
 
-	for (const containerInfo of containers) {
-		const container = docker.getContainer(containerInfo.Id);
-		const logStream = await container.logs({
-			follow: true,
-			stdout: true,
-			stderr: true,
-			timestamps: false,
-			tail: 10
-		});
-		streams.push({ container: containerInfo, stream: logStream });
-	}
+	// Filter out failed streams and log errors
+	const streams = streamResults
+		.filter((result): result is PromiseFulfilledResult<{ container: ContainerInfo; stream: NodeJS.ReadableStream }> => {
+			if (result.status === 'rejected') {
+				console.error('Failed to connect to container log stream:', result.reason);
+				return false;
+			}
+			return true;
+		})
+		.map((result) => result.value);
 
 	const logQueue: LogEntry[] = [];
 	let resolveWait: (() => void) | null = null;
