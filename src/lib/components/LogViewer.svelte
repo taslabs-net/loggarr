@@ -19,9 +19,33 @@
 	let autoScroll = $state(true);
 	let logContainer: HTMLElement | null = $state(null);
 	let showContainerDropdown = $state(false);
+	let searchQuery = $state('');
+	let searchRegex = $state<RegExp | null>(null);
+	let searchError = $state<string | null>(null);
+	let searchInput: HTMLInputElement | null = $state(null);
+	let showHelp = $state(false);
+	let lastKey = $state('');
+	let lastKeyTime = $state(0);
+
+	// Update regex when search query changes
+	$effect(() => {
+		if (!searchQuery.trim()) {
+			searchRegex = null;
+			searchError = null;
+			return;
+		}
+		try {
+			searchRegex = new RegExp(searchQuery, 'i');
+			searchError = null;
+		} catch {
+			searchRegex = null;
+			searchError = 'Invalid regex';
+		}
+	});
 
 	const displayLogs = $derived(paused ? pausedLogs : logs);
-	const filteredLogs = $derived(displayLogs.filter((log) => filterLevels.has(log.level)));
+	const levelFilteredLogs = $derived(displayLogs.filter((log) => filterLevels.has(log.level)));
+	const filteredLogs = $derived(searchRegex ? levelFilteredLogs.filter((log) => searchRegex!.test(log.message)) : levelFilteredLogs);
 
 	function togglePause() {
 		if (!paused) {
@@ -95,9 +119,98 @@
 			logContainer.scrollTop = logContainer.scrollHeight;
 		}
 	});
+
+	function handleKeydown(e: KeyboardEvent) {
+		const target = e.target as HTMLElement;
+		const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+
+		// Always allow Escape to close help
+		if (e.key === 'Escape') {
+			if (showHelp) {
+				showHelp = false;
+				e.preventDefault();
+			}
+			return;
+		}
+
+		// Skip shortcuts when typing in inputs (except Escape)
+		if (isInput) return;
+
+		const now = Date.now();
+		const isSequence = now - lastKeyTime < 500;
+
+		switch (e.key) {
+			case ' ':
+				if (!readonly) {
+					e.preventDefault();
+					togglePause();
+				}
+				break;
+			case '/':
+				e.preventDefault();
+				searchInput?.focus();
+				break;
+			case 'j':
+				if (logContainer) {
+					logContainer.scrollBy({ top: 100, behavior: 'smooth' });
+				}
+				break;
+			case 'k':
+				if (logContainer) {
+					logContainer.scrollBy({ top: -100, behavior: 'smooth' });
+				}
+				break;
+			case 'g':
+				if (isSequence && lastKey === 'g' && logContainer) {
+					logContainer.scrollTo({ top: 0, behavior: 'smooth' });
+					autoScroll = false;
+				}
+				break;
+			case 'G':
+				if (logContainer) {
+					logContainer.scrollTo({ top: logContainer.scrollHeight, behavior: 'smooth' });
+					autoScroll = true;
+				}
+				break;
+			case 's':
+				if (!readonly && paused && onSaveSnapshot) {
+					handleSaveSnapshot();
+				}
+				break;
+			case '?':
+				e.preventDefault();
+				showHelp = !showHelp;
+				break;
+		}
+
+		lastKey = e.key;
+		lastKeyTime = now;
+	}
 </script>
 
+<svelte:window onkeydown={handleKeydown} />
+
 <div class="log-viewer">
+	{#if showHelp}
+		<div class="help-overlay" onclick={() => (showHelp = false)} onkeydown={(e) => e.key === 'Escape' && (showHelp = false)} role="button" tabindex="-1">
+			<div class="help-modal" onclick={(e) => e.stopPropagation()} onkeydown={() => {}} role="dialog" aria-label="Keyboard shortcuts" tabindex="-1">
+				<h2>Keyboard Shortcuts</h2>
+				<div class="shortcut-list">
+					<div class="shortcut"><kbd>Space</kbd><span>Pause / Resume</span></div>
+					<div class="shortcut"><kbd>/</kbd><span>Focus search</span></div>
+					<div class="shortcut"><kbd>j</kbd><span>Scroll down</span></div>
+					<div class="shortcut"><kbd>k</kbd><span>Scroll up</span></div>
+					<div class="shortcut"><kbd>g g</kbd><span>Go to top</span></div>
+					<div class="shortcut"><kbd>G</kbd><span>Go to bottom</span></div>
+					<div class="shortcut"><kbd>s</kbd><span>Save snapshot (when paused)</span></div>
+					<div class="shortcut"><kbd>?</kbd><span>Toggle this help</span></div>
+					<div class="shortcut"><kbd>Esc</kbd><span>Close help / Clear focus</span></div>
+				</div>
+				<button class="help-close" onclick={() => (showHelp = false)}>Close</button>
+			</div>
+		</div>
+	{/if}
+
 	<div class="controls">
 		{#if !readonly}
 			<div class="control-group">
@@ -147,6 +260,16 @@
 			{/each}
 		</div>
 
+		<div class="search-group">
+			<input type="text" class="search-input" class:error={searchError} placeholder="Search (regex)" bind:value={searchQuery} bind:this={searchInput} />
+			{#if searchQuery}
+				<button class="search-clear" onclick={() => (searchQuery = '')}>x</button>
+			{/if}
+			{#if searchError}
+				<span class="search-error">{searchError}</span>
+			{/if}
+		</div>
+
 		<label class="auto-scroll">
 			<input type="checkbox" bind:checked={autoScroll} />
 			Auto-scroll
@@ -165,7 +288,11 @@
 	</div>
 
 	<div class="status-bar">
-		<span>{filteredLogs.length} logs</span>
+		<span
+			>{filteredLogs.length} logs{#if searchQuery && !searchError}
+				(filtered from {levelFilteredLogs.length}){/if}</span
+		>
+		<span class="help-hint">Press <kbd>?</kbd> for shortcuts</span>
 		{#if paused}
 			<span class="paused-indicator">PAUSED</span>
 		{/if}
@@ -360,6 +487,54 @@
 		font-size: 0.8125rem;
 	}
 
+	.search-group {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		position: relative;
+	}
+
+	.search-input {
+		padding: 0.4rem 0.75rem;
+		border: 1px solid var(--border-color);
+		background: var(--bg-primary);
+		color: var(--text-primary);
+		border-radius: 4px;
+		font-size: 0.8125rem;
+		font-family: inherit;
+		width: 160px;
+	}
+
+	.search-input:focus {
+		outline: none;
+		border-color: var(--color-accent);
+	}
+
+	.search-input.error {
+		border-color: var(--color-error);
+	}
+
+	.search-clear {
+		position: absolute;
+		right: 0.5rem;
+		background: none;
+		border: none;
+		color: var(--text-secondary);
+		cursor: pointer;
+		font-size: 0.875rem;
+		padding: 0.25rem;
+		line-height: 1;
+	}
+
+	.search-clear:hover {
+		color: var(--text-primary);
+	}
+
+	.search-error {
+		color: var(--color-error);
+		font-size: 0.75rem;
+	}
+
 	.auto-scroll {
 		display: flex;
 		align-items: center;
@@ -434,5 +609,91 @@
 
 	.version {
 		margin-left: auto;
+	}
+
+	.help-hint {
+		color: var(--text-secondary);
+		font-size: 0.7rem;
+	}
+
+	.help-hint kbd {
+		background: var(--bg-primary);
+		border: 1px solid var(--border-color);
+		border-radius: 3px;
+		padding: 0.1rem 0.3rem;
+		font-family: inherit;
+		font-size: 0.65rem;
+	}
+
+	.help-overlay {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.6);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 100;
+	}
+
+	.help-modal {
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		padding: 1.5rem;
+		min-width: 320px;
+		max-width: 90vw;
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+	}
+
+	.help-modal h2 {
+		margin: 0 0 1rem;
+		font-size: 1rem;
+		font-weight: 600;
+		color: var(--text-primary);
+	}
+
+	.shortcut-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.shortcut {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		font-size: 0.8125rem;
+	}
+
+	.shortcut kbd {
+		background: var(--bg-primary);
+		border: 1px solid var(--border-color);
+		border-radius: 4px;
+		padding: 0.25rem 0.5rem;
+		font-family: inherit;
+		font-size: 0.75rem;
+		min-width: 60px;
+		text-align: center;
+		color: var(--color-accent);
+	}
+
+	.shortcut span {
+		color: var(--text-secondary);
+	}
+
+	.help-close {
+		margin-top: 1.5rem;
+		width: 100%;
+		padding: 0.5rem;
+		background: var(--bg-primary);
+		border: 1px solid var(--border-color);
+		border-radius: 4px;
+		color: var(--text-primary);
+		cursor: pointer;
+		font-size: 0.8125rem;
+	}
+
+	.help-close:hover {
+		background: var(--bg-hover);
 	}
 </style>

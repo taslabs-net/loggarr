@@ -20,8 +20,11 @@ A simple Docker log viewer. Streams logs from the Docker socket with basic filte
 - **Stream logs** from all Docker containers via the Docker socket
 - **Pause/Resume** log streaming
 - **Save snapshots** of paused log state
+- **Export snapshots** to Markdown, JSON, or plain text
+- **Search logs** with regex support and real-time filtering
 - **Capture history** - configurable line buffer (default: 100, max: 1000)
 - **Filter by log level** - alert, error, warning, info, debug
+- **Keyboard shortcuts** for power users (press `?` for help)
 - **SQLite storage** for saved snapshots and configuration (streaming logs are memory-only)
 - **Prometheus metrics** on port 9091
 - **Health check** endpoint at `/health`
@@ -47,6 +50,19 @@ Then open `http://localhost:9797` in your browser.
 | `METRICS_PORT`       | `9091`  | Prometheus metrics port           |
 | `LOG_BUFFER_SIZE`    | `100`   | Number of lines to keep in memory |
 | `LOG_BUFFER_MAX`     | `1000`  | Maximum configurable buffer size  |
+
+## Keyboard Shortcuts
+
+| Key       | Action                      |
+| --------- | --------------------------- |
+| `Space`   | Pause / Resume              |
+| `/`       | Focus search                |
+| `j` / `k` | Scroll down / up            |
+| `g g`     | Go to top                   |
+| `G`       | Go to bottom                |
+| `s`       | Save snapshot (when paused) |
+| `?`       | Show shortcuts help         |
+| `Esc`     | Close help                  |
 
 ## Requirements
 
