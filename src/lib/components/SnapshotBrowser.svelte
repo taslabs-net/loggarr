@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snapshot, LogEntry } from '$lib/types';
+	import { exportLogs, type ExportFormat } from '$lib/utils/export';
 
 	interface Props {
 		onViewSnapshot: (logs: LogEntry[], name: string) => void;
@@ -12,6 +13,8 @@
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 	let deletingId = $state<number | null>(null);
+	let exportingId = $state<number | null>(null);
+	let showExportMenu = $state<number | null>(null);
 
 	async function fetchSnapshots() {
 		loading = true;
@@ -61,6 +64,33 @@
 		}
 	}
 
+	async function handleExport(id: number, format: ExportFormat) {
+		exportingId = id;
+		showExportMenu = null;
+		try {
+			const response = await fetch(`/api/v1/snapshots/${id}`);
+			if (response.ok) {
+				const snapshot: Snapshot = await response.json();
+				if (snapshot.logs) {
+					exportLogs({
+						name: snapshot.name,
+						logs: snapshot.logs,
+						format,
+						createdAt: snapshot.createdAt
+					});
+				}
+			}
+		} catch (err) {
+			console.error('Failed to export snapshot:', err);
+		} finally {
+			exportingId = null;
+		}
+	}
+
+	function toggleExportMenu(id: number) {
+		showExportMenu = showExportMenu === id ? null : id;
+	}
+
 	function formatDate(dateStr: string): string {
 		const date = new Date(dateStr);
 		return date.toLocaleString();
@@ -94,8 +124,20 @@
 						</div>
 						<div class="snapshot-actions">
 							<button class="view-btn" onclick={() => viewSnapshot(snapshot.id)}>View</button>
+							<div class="export-dropdown">
+								<button class="export-btn" onclick={() => toggleExportMenu(snapshot.id)} disabled={exportingId === snapshot.id}>
+									{exportingId === snapshot.id ? '...' : 'Export'}
+								</button>
+								{#if showExportMenu === snapshot.id}
+									<div class="export-menu">
+										<button onclick={() => handleExport(snapshot.id, 'markdown')}>Markdown (LLM)</button>
+										<button onclick={() => handleExport(snapshot.id, 'json')}>JSON</button>
+										<button onclick={() => handleExport(snapshot.id, 'text')}>Plain Text</button>
+									</div>
+								{/if}
+							</div>
 							<button class="delete-btn" onclick={() => deleteSnapshot(snapshot.id)} disabled={deletingId === snapshot.id}>
-								{deletingId === snapshot.id ? '...' : 'Delete'}
+								{deletingId === snapshot.id ? '...' : 'Del'}
 							</button>
 						</div>
 					</div>
@@ -243,5 +285,65 @@
 	.delete-btn:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
+	}
+
+	.export-dropdown {
+		position: relative;
+	}
+
+	.export-btn {
+		padding: 0.35rem 0.75rem;
+		border: 1px solid var(--border-color);
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 0.75rem;
+		background: var(--bg-secondary);
+		color: var(--text-primary);
+	}
+
+	.export-btn:hover {
+		background: var(--bg-hover);
+	}
+
+	.export-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.export-menu {
+		position: absolute;
+		top: 100%;
+		right: 0;
+		margin-top: 0.25rem;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: 4px;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+		z-index: 10;
+		min-width: 140px;
+	}
+
+	.export-menu button {
+		display: block;
+		width: 100%;
+		padding: 0.5rem 0.75rem;
+		border: none;
+		background: none;
+		color: var(--text-primary);
+		font-size: 0.75rem;
+		text-align: left;
+		cursor: pointer;
+	}
+
+	.export-menu button:hover {
+		background: var(--bg-hover);
+	}
+
+	.export-menu button:first-child {
+		border-radius: 4px 4px 0 0;
+	}
+
+	.export-menu button:last-child {
+		border-radius: 0 0 4px 4px;
 	}
 </style>

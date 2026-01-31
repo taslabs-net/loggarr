@@ -5,6 +5,7 @@
 	import SnapshotBrowser from '$lib/components/SnapshotBrowser.svelte';
 	import type { LogEntry, ContainerSummary } from '$lib/types';
 	import { env } from '$env/dynamic/public';
+	import { exportLogs } from '$lib/utils/export';
 
 	const bufferSize = parseInt(env.PUBLIC_LOG_BUFFER_SIZE || '100', 10);
 
@@ -159,6 +160,15 @@
 		viewingSnapshot = null;
 	}
 
+	function exportCurrentSnapshot() {
+		if (!viewingSnapshot) return;
+		exportLogs({
+			name: viewingSnapshot.name,
+			logs: viewingSnapshot.logs,
+			format: 'markdown'
+		});
+	}
+
 	onMount(async () => {
 		await fetchContainers();
 		connect();
@@ -179,6 +189,7 @@
 		<div class="header-actions">
 			{#if viewingSnapshot}
 				<span class="viewing-snapshot">Viewing: {viewingSnapshot.name}</span>
+				<button class="header-btn export" onclick={exportCurrentSnapshot}>Export MD</button>
 				<button class="header-btn" onclick={closeSnapshotViewer}>Back to Live</button>
 			{:else}
 				<button class="header-btn" class:active={showSnapshotBrowser} onclick={() => (showSnapshotBrowser = !showSnapshotBrowser)}> Snapshots </button>
@@ -297,6 +308,16 @@
 		background: var(--color-accent);
 		color: white;
 		border-color: var(--color-accent);
+	}
+
+	.header-btn.export {
+		background: var(--color-success);
+		color: white;
+		border-color: var(--color-success);
+	}
+
+	.header-btn.export:hover {
+		opacity: 0.9;
 	}
 
 	.viewing-snapshot {
