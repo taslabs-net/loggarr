@@ -46,6 +46,7 @@ Then open `http://localhost:8080` in your browser.
 - **Backend**: Node.js
 - **Database**: SQLite (PostgreSQL/MySQL planned)
 - **Real-time**: WebSocket/SSE
+- **Registry**: GitHub Container Registry (ghcr.io)
 
 ## Roadmap
 
