@@ -1,5 +1,10 @@
 # Loggarr
 
+[![CI](https://github.com/taslabs-net/loggarr/actions/workflows/ci.yml/badge.svg)](https://github.com/taslabs-net/loggarr/actions/workflows/ci.yml)
+[![Release](https://github.com/taslabs-net/loggarr/actions/workflows/release.yml/badge.svg)](https://github.com/taslabs-net/loggarr/actions/workflows/release.yml)
+[![License: MIT](https://img.shields.io/github/license/taslabs-net/loggarr)](LICENSE)
+[![GitHub release](https://img.shields.io/github/v/release/taslabs-net/loggarr)](https://github.com/taslabs-net/loggarr/releases)
+
 A simple Docker log viewer. Streams logs from the Docker socket with basic filtering and capture capabilities.
 
 ## Features
