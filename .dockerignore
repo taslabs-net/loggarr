@@ -30,7 +30,14 @@ vendor/
 # Build artifacts
 dist/
 build/
+.svelte-kit/
 coverage/
+.eslintcache
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Runtime data
+data/
 
 # Logs
 *.log
