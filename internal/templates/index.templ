@@ -1,0 +1,196 @@
+package templates
+
+import (
+	"fmt"
+	"github.com/taslabs-net/loggarr/internal/models"
+)
+
+func containerCount(containers []models.Container) string {
+	return fmt.Sprintf("%d", len(containers))
+}
+
+templ Index(containers []models.Container, bufferMax int, version string) {
+	<!DOCTYPE html>
+	<html lang="en" data-theme="dark">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>Loggarr</title>
+			<link href="/static/vendor/daisyui.min.css" rel="stylesheet" type="text/css"/>
+			<script src="/static/vendor/tailwind.js"></script>
+			<script src="/static/vendor/htmx.min.js"></script>
+			<script src="/static/vendor/htmx-sse.js"></script>
+			<style>
+				.log-container { font-family: 'Fira Code', 'Consolas', monospace; font-size: 0.8125rem; }
+				.log-entry { border-left: 3px solid currentColor; }
+				.log-entry:hover { background-color: rgba(255,255,255,0.05); }
+				.level-alert { color: #f87171; border-left-color: #f87171; }
+				.level-error { color: #ef4444; border-left-color: #ef4444; }
+				.level-warning { color: #f59e0b; border-left-color: #f59e0b; }
+				.level-info { color: #3b82f6; border-left-color: #3b82f6; }
+				.level-debug { color: #6b7280; border-left-color: #6b7280; }
+				.btn-level-alert { background-color: #f87171; border-color: #f87171; color: #000; }
+				.btn-level-alert:hover { background-color: #ef4444; border-color: #ef4444; }
+				.btn-level-error { background-color: #ef4444; border-color: #ef4444; color: #fff; }
+				.btn-level-error:hover { background-color: #dc2626; border-color: #dc2626; }
+				.btn-level-warning { background-color: #f59e0b; border-color: #f59e0b; color: #000; }
+				.btn-level-warning:hover { background-color: #d97706; border-color: #d97706; }
+				.btn-level-info { background-color: #3b82f6; border-color: #3b82f6; color: #fff; }
+				.btn-level-info:hover { background-color: #2563eb; border-color: #2563eb; }
+				.btn-level-debug { background-color: #6b7280; border-color: #6b7280; color: #fff; }
+				.btn-level-debug:hover { background-color: #4b5563; border-color: #4b5563; }
+			</style>
+		</head>
+		<body class="bg-base-300 min-h-screen" data-buffer-max={ fmt.Sprintf("%d", bufferMax) }>
+			<div class="flex flex-col h-screen">
+				<header class="navbar bg-base-200 border-b border-base-300">
+					<div class="flex-1">
+						<span class="text-xl font-bold">Loggarr</span>
+					</div>
+					<div class="flex-none gap-2">
+						<div class="badge badge-success gap-1" id="connection-status">
+							<span class="w-2 h-2 rounded-full bg-success"></span>
+							Connected
+						</div>
+					</div>
+				</header>
+				<div class="bg-base-200 p-3 flex flex-wrap gap-3 items-center border-b border-base-300">
+					<button id="pause-btn" class="btn btn-sm btn-outline" onclick="togglePause()">Pause</button>
+					<button id="save-btn" class="btn btn-sm btn-success hidden">Save Snapshot</button>
+					<div class="dropdown">
+						<label tabindex="0" class="btn btn-sm btn-outline">
+							Containers ({ containerCount(containers) })
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+							</svg>
+						</label>
+						<ul tabindex="0" class="dropdown-content z-10 menu p-2 shadow bg-base-200 rounded-box w-64 max-h-60 overflow-y-auto">
+							for _, c := range containers {
+								if c.State == "running" {
+									<li>
+										<label class="flex items-center gap-2 cursor-pointer">
+											<input type="checkbox" class="checkbox checkbox-sm container-filter" value={ c.ID } checked/>
+											<span class="text-sm truncate">{ c.Name }</span>
+										</label>
+									</li>
+								}
+							}
+						</ul>
+					</div>
+					<div class="flex gap-1">
+						<button class="btn btn-xs level-filter btn-level-alert" data-level="alert">alert</button>
+						<button class="btn btn-xs level-filter btn-level-error" data-level="error">error</button>
+						<button class="btn btn-xs level-filter btn-level-warning" data-level="warning">warning</button>
+						<button class="btn btn-xs level-filter btn-level-info" data-level="info">info</button>
+						<button class="btn btn-xs level-filter btn-level-debug" data-level="debug">debug</button>
+					</div>
+					<div class="divider divider-horizontal mx-1"></div>
+					<div class="dropdown">
+						<label tabindex="0" class="btn btn-sm btn-outline" id="snapshots-btn">
+							Snapshots
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+							</svg>
+						</label>
+						<ul tabindex="0" class="dropdown-content z-10 menu p-2 shadow bg-base-200 rounded-box w-72 max-h-60 overflow-y-auto" id="snapshots-list">
+							<li class="text-base-content/50 text-sm p-2">Loading...</li>
+						</ul>
+					</div>
+					<div class="dropdown">
+						<label tabindex="0" class="btn btn-sm btn-outline">
+							Export
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+							</svg>
+						</label>
+						<ul tabindex="0" class="dropdown-content z-10 menu p-2 shadow bg-base-200 rounded-box w-40">
+							<li><a onclick="exportLogs('json')">Export JSON</a></li>
+							<li><a onclick="exportLogs('csv')">Export CSV</a></li>
+						</ul>
+					</div>
+					<div class="flex-1"></div>
+					<input type="text" id="search-input" placeholder="Search (regex)" class="input input-sm input-bordered w-48"/>
+					<label class="flex items-center gap-2 cursor-pointer">
+						<input type="checkbox" id="auto-scroll" class="checkbox checkbox-sm" checked/>
+						<span class="text-sm">Auto-scroll</span>
+					</label>
+				</div>
+				<div id="log-container" class="flex-1 overflow-y-auto p-2 log-container bg-base-300"></div>
+				<div class="bg-base-200 px-4 py-2 flex justify-between text-xs text-base-content/60 border-t border-base-300">
+					<span id="log-count">0 logs</span>
+					<span>Press <kbd class="kbd kbd-xs">?</kbd> { "for" } shortcuts</span>
+					<span id="version">Loggarr { version }</span>
+				</div>
+			</div>
+		<!-- Log Details Modal -->
+		<dialog id="log-modal" class="modal">
+			<div class="modal-box max-w-2xl">
+				<h3 class="font-bold text-lg mb-4">Log Details</h3>
+				<div class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+					<span class="text-base-content/60">Timestamp</span>
+					<span id="log-detail-time" class="font-mono"></span>
+					<span class="text-base-content/60">Container</span>
+					<span id="log-detail-container" class="font-mono"></span>
+					<span class="text-base-content/60">Container ID</span>
+					<span id="log-detail-container-id" class="font-mono text-xs"></span>
+					<span class="text-base-content/60">Stream</span>
+					<span id="log-detail-stream" class="font-mono"></span>
+					<span class="text-base-content/60">Level</span>
+					<span id="log-detail-level" class="font-mono uppercase"></span>
+				</div>
+				<div class="mt-4">
+					<span class="text-base-content/60 text-sm">Message</span>
+					<pre id="log-detail-message" class="mt-2 p-3 bg-base-300 rounded-lg text-sm font-mono whitespace-pre-wrap break-words max-h-64 overflow-y-auto"></pre>
+				</div>
+				<div class="modal-action">
+					<button class="btn btn-sm btn-ghost" onclick="copyLogDetails()">Copy</button>
+					<button class="btn btn-sm" onclick="document.getElementById('log-modal').close()">Close</button>
+				</div>
+			</div>
+			<form method="dialog" class="modal-backdrop"><button>close</button></form>
+		</dialog>
+		<!-- Help Modal -->
+		<dialog id="help-modal" class="modal">
+			<div class="modal-box max-w-md">
+				<h3 class="font-bold text-lg mb-4">Keyboard Shortcuts</h3>
+				<div class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+					<kbd class="kbd kbd-sm">Space</kbd><span>Pause / Resume</span>
+					<kbd class="kbd kbd-sm">/</kbd><span>Focus search</span>
+					<kbd class="kbd kbd-sm">Esc</kbd><span>Clear search</span>
+					<kbd class="kbd kbd-sm">j</kbd><span>Scroll down</span>
+					<kbd class="kbd kbd-sm">k</kbd><span>Scroll up</span>
+					<kbd class="kbd kbd-sm">G</kbd><span>Scroll to bottom</span>
+					<kbd class="kbd kbd-sm">g g</kbd><span>Scroll to top</span>
+					<kbd class="kbd kbd-sm">c</kbd><span>Clear logs</span>
+					<kbd class="kbd kbd-sm">Ctrl+S</kbd><span>Save snapshot</span>
+					<kbd class="kbd kbd-sm">?</kbd><span>Show this help</span>
+				</div>
+				<div class="modal-action">
+					<button class="btn btn-sm" onclick="document.getElementById('help-modal').close()">Close</button>
+				</div>
+			</div>
+			<form method="dialog" class="modal-backdrop"><button>close</button></form>
+		</dialog>
+		<!-- Save Snapshot Modal -->
+		<dialog id="save-modal" class="modal">
+				<div class="modal-box">
+					<h3 class="font-bold text-lg">Save Snapshot</h3>
+					<div class="form-control w-full mt-4">
+						<label class="label"><span class="label-text">Name</span></label>
+						<input type="text" id="snapshot-name" placeholder="My Snapshot" class="input input-bordered w-full"/>
+					</div>
+					<div class="form-control w-full mt-2">
+						<label class="label"><span class="label-text">Description (optional)</span></label>
+						<textarea id="snapshot-desc" placeholder="Notes about this snapshot..." class="textarea textarea-bordered w-full"></textarea>
+					</div>
+					<div class="modal-action">
+						<button class="btn btn-ghost" onclick="document.getElementById('save-modal').close()">Cancel</button>
+						<button class="btn btn-primary" onclick="confirmSaveSnapshot()">Save</button>
+					</div>
+				</div>
+				<form method="dialog" class="modal-backdrop"><button>close</button></form>
+			</dialog>
+			<script src="/static/app.js"></script>
+		</body>
+	</html>
+}

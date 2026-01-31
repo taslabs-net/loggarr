@@ -14,6 +14,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version
+        id: version
+        run: echo "version=$(git describe --tags --always --dirty)" >> $GITHUB_OUTPUT
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -25,10 +31,12 @@ jobs:
           push: false
           platforms: linux/amd64
           tags: loggarr:test
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Summary
         run: |
           echo "## Build Results" >> $GITHUB_STEP_SUMMARY
-          echo "Docker image built successfully" >> $GITHUB_STEP_SUMMARY
+          echo "Docker image built successfully (v${{ steps.version.outputs.version }})" >> $GITHUB_STEP_SUMMARY

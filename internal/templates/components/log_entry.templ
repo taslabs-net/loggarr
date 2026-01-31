@@ -1,0 +1,64 @@
+package components
+
+import (
+	"github.com/taslabs-net/loggarr/internal/models"
+	"time"
+)
+
+func formatTime(t time.Time) string {
+	return t.Format("15:04:05")
+}
+
+func levelClass(level models.LogLevel) string {
+	switch level {
+	case models.LogLevelAlert:
+		return "level-alert"
+	case models.LogLevelError:
+		return "level-error"
+	case models.LogLevelWarning:
+		return "level-warning"
+	case models.LogLevelInfo:
+		return "level-info"
+	case models.LogLevelDebug:
+		return "level-debug"
+	default:
+		return "level-info"
+	}
+}
+
+func formatFullTime(t time.Time) string {
+	return t.Format("2006-01-02 15:04:05.000")
+}
+
+templ LogEntry(entry models.LogEntry) {
+	if entry.IsEvent {
+		<div class={ "log-entry p-1 pl-2 mb-0.5 bg-base-100 grid grid-cols-[auto_auto_auto_1fr] gap-4 items-start border-l-4 border-accent cursor-pointer hover:bg-base-200", levelClass(entry.Level) }
+			data-container={ entry.ContainerID }
+			data-container-name={ entry.Container }
+			data-level={ string(entry.Level) }
+			data-stream={ entry.Stream }
+			data-time={ formatFullTime(entry.Timestamp) }
+			data-message={ entry.Message }
+			data-event={ string(entry.EventType) }
+			onclick="showLogDetails(this)">
+			<span class="text-base-content/50 whitespace-nowrap">{ formatTime(entry.Timestamp) }</span>
+			<span class="text-accent whitespace-nowrap truncate max-w-32">{ entry.Container }</span>
+			<span class="badge badge-sm badge-accent uppercase">{ string(entry.EventType) }</span>
+			<span class="text-base-content/80 break-words italic">{ entry.Message }</span>
+		</div>
+	} else {
+		<div class={ "log-entry p-1 pl-2 mb-0.5 bg-base-200 grid grid-cols-[auto_auto_auto_1fr] gap-4 items-start cursor-pointer hover:bg-base-100", levelClass(entry.Level) }
+			data-container={ entry.ContainerID }
+			data-container-name={ entry.Container }
+			data-level={ string(entry.Level) }
+			data-stream={ entry.Stream }
+			data-time={ formatFullTime(entry.Timestamp) }
+			data-message={ entry.Message }
+			onclick="showLogDetails(this)">
+			<span class="text-base-content/50 whitespace-nowrap">{ formatTime(entry.Timestamp) }</span>
+			<span class="text-primary whitespace-nowrap truncate max-w-32">{ entry.Container }</span>
+			<span class={ "uppercase font-semibold text-xs min-w-16", levelClass(entry.Level) }>{ string(entry.Level) }</span>
+			<span class="text-base-content break-words">{ entry.Message }</span>
+		</div>
+	}
+}

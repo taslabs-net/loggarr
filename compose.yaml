@@ -3,16 +3,15 @@ services:
     image: ghcr.io/taslabs-net/loggarr:latest
     ports:
       - '9797:9797'
-      - '9091:9091'
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./data:/app/data
     environment:
       - PORT=9797
-      - METRICS_PORT=9091
-      - LOG_BUFFER_SIZE=100
+      - LOG_BUFFER_MAX=1000
+      - LOG_TAIL_LINES=10
     healthcheck:
-      test: ['CMD', 'curl', '-sf', 'http://localhost:9797/api/health']
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:9797/api/health']
       interval: 30s
       timeout: 10s
       retries: 3

@@ -1,32 +1,44 @@
-# Dependencies layer - prebuilt binaries work on Debian
-FROM node:25-slim AS deps
-RUN npm install -g pnpm
-WORKDIR /app
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm install --frozen-lockfile
+# Build stage
+FROM golang:alpine AS builder
 
-# Build layer
-FROM deps AS builder
-WORKDIR /app
-COPY svelte.config.js vite.config.ts tsconfig.json ./
-COPY src ./src
-COPY static ./static
-RUN pnpm build
-RUN pnpm prune --prod --ignore-scripts
+RUN apk add --no-cache git
 
-# Runtime layer - minimal
-FROM node:25-slim AS runtime
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
-ENV NODE_ENV=production
+# Install templ
+RUN go install github.com/a-h/templ/cmd/templ@latest
+
+# Copy go mod files first for caching
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source
+COPY . .
+
+# Generate templ and build
+ARG VERSION=dev
+RUN templ generate
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-s -w -X github.com/taslabs-net/loggarr/internal/config.Version=${VERSION}" -o loggarr ./cmd/loggarr
+
+# Runtime stage - minimal
+FROM alpine:3.21
+
+RUN apk add --no-cache ca-certificates tzdata
+
+WORKDIR /app
+
+# Create data directory
+RUN mkdir -p /app/data
+
 ENV PORT=9797
-ENV METRICS_PORT=9091
+ENV DATA_DIR=/app/data
 
-COPY --from=builder /app/build ./build
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/loggarr .
+COPY --from=builder /app/static ./static
 
-EXPOSE 9797 9091
+EXPOSE 9797
 
-CMD ["node", "build"]
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:9797/api/health || exit 1
+
+CMD ["./loggarr"]
