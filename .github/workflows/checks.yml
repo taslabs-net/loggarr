@@ -1,0 +1,71 @@
+name: Checks
+
+on:
+  workflow_call:
+
+jobs:
+  checks:
+    name: Lint, Type, Test
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prettier
+        run: |
+          set -o pipefail
+          echo "## Prettier Results" >> $GITHUB_STEP_SUMMARY
+          if pnpm format:check 2>&1 | tee output.txt; then
+            echo "No formatting issues" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Formatting issues detected:" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat output.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+      - name: ESLint
+        run: |
+          set -o pipefail
+          echo "## ESLint Results" >> $GITHUB_STEP_SUMMARY
+          if pnpm lint 2>&1 | tee output.txt; then
+            echo "No linting errors" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Linting errors detected:" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat output.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+      - name: TypeCheck
+        run: |
+          set -o pipefail
+          echo "## TypeCheck Results" >> $GITHUB_STEP_SUMMARY
+          if pnpm typecheck 2>&1 | tee output.txt; then
+            echo "No type errors" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Type errors detected:" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat output.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+      - name: Test
+        run: |
+          set -o pipefail
+          echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+          if pnpm test 2>&1 | tee output.txt; then
+            echo "All tests passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Test failures:" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat output.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
