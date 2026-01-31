@@ -1,5 +1,7 @@
 export type LogLevel = 'debug' | 'info' | 'warning' | 'error' | 'alert';
 
+export type ContainerEventType = 'start' | 'stop' | 'restart' | 'die' | 'health_status' | 'create' | 'destroy';
+
 export interface LogEntry {
 	timestamp: Date;
 	container: string;
@@ -7,6 +9,8 @@ export interface LogEntry {
 	stream: 'stdout' | 'stderr';
 	message: string;
 	level: LogLevel;
+	isEvent?: boolean;
+	eventType?: ContainerEventType;
 }
 
 export interface ContainerSummary {

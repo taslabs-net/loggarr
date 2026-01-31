@@ -26,6 +26,8 @@
 	let showHelp = $state(false);
 	let lastKey = $state('');
 	let lastKeyTime = $state(0);
+	let selectedLog = $state<LogEntry | null>(null);
+	let copyFeedback = $state(false);
 
 	// Update regex when search query changes
 	$effect(() => {
@@ -114,6 +116,54 @@
 		}
 	}
 
+	function tryParseJson(str: string): { isJson: boolean; parsed: unknown; formatted: string } {
+		try {
+			const parsed = JSON.parse(str);
+			return { isJson: true, parsed, formatted: JSON.stringify(parsed, null, 2) };
+		} catch {
+			return { isJson: false, parsed: null, formatted: str };
+		}
+	}
+
+	function selectLog(log: LogEntry) {
+		selectedLog = selectedLog === log ? null : log;
+	}
+
+	async function copyToClipboard(text: string) {
+		await navigator.clipboard.writeText(text);
+		copyFeedback = true;
+		setTimeout(() => (copyFeedback = false), 1500);
+	}
+
+	function filterByContainer(containerId: string) {
+		// Deselect all, then select only this container
+		selectedContainers.clear();
+		selectedContainers.add(containerId);
+		onContainerFilterChange?.();
+		selectedLog = null;
+	}
+
+	function getEventIcon(eventType: string | undefined): string {
+		switch (eventType) {
+			case 'start':
+				return '▶';
+			case 'stop':
+				return '◼';
+			case 'restart':
+				return '↻';
+			case 'die':
+				return '✕';
+			case 'health_status':
+				return '♥';
+			case 'create':
+				return '+';
+			case 'destroy':
+				return '−';
+			default:
+				return '●';
+		}
+	}
+
 	$effect(() => {
 		if (autoScroll && logContainer && !paused) {
 			logContainer.scrollTop = logContainer.scrollHeight;
@@ -124,10 +174,13 @@
 		const target = e.target as HTMLElement;
 		const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
 
-		// Always allow Escape to close help
+		// Always allow Escape to close panels
 		if (e.key === 'Escape') {
 			if (showHelp) {
 				showHelp = false;
+				e.preventDefault();
+			} else if (selectedLog) {
+				selectedLog = null;
 				e.preventDefault();
 			}
 			return;
@@ -276,15 +329,69 @@
 		</label>
 	</div>
 
-	<div class="log-container" bind:this={logContainer}>
-		{#each filteredLogs as log (log.timestamp.toString() + log.message)}
-			<div class="log-entry" style="--level-color: {getLevelColor(log.level)}">
-				<span class="timestamp">{new Date(log.timestamp).toLocaleTimeString()}</span>
-				<span class="container">{log.container}</span>
-				<span class="level">{log.level}</span>
-				<span class="message">{log.message}</span>
+	<div class="log-area">
+		<div class="log-container" bind:this={logContainer}>
+			{#each filteredLogs as log (log.timestamp.toString() + log.message + log.containerId)}
+				<button class="log-entry" class:event={log.isEvent} class:selected={selectedLog === log} style="--level-color: {getLevelColor(log.level)}" onclick={() => selectLog(log)}>
+					<span class="timestamp">{new Date(log.timestamp).toLocaleTimeString()}</span>
+					<span class="container">{log.container}</span>
+					{#if log.isEvent}
+						<span class="event-badge">{getEventIcon(log.eventType)} {log.eventType}</span>
+					{:else}
+						<span class="level">{log.level}</span>
+					{/if}
+					<span class="message">{log.message}</span>
+				</button>
+			{/each}
+		</div>
+
+		{#if selectedLog}
+			{@const jsonResult = tryParseJson(selectedLog.message)}
+			<div class="details-panel">
+				<div class="details-header">
+					<h3>Log Details</h3>
+					<button class="details-close" onclick={() => (selectedLog = null)}>x</button>
+				</div>
+				<div class="details-content">
+					<div class="details-meta">
+						<div class="meta-row">
+							<span class="meta-label">Time</span>
+							<span class="meta-value">{new Date(selectedLog.timestamp).toLocaleString()}</span>
+						</div>
+						<div class="meta-row">
+							<span class="meta-label">Container</span>
+							<span class="meta-value container-value">{selectedLog.container}</span>
+						</div>
+						<div class="meta-row">
+							<span class="meta-label">Level</span>
+							<span class="meta-value level-value" style="--level-color: {getLevelColor(selectedLog.level)}">{selectedLog.level}</span>
+						</div>
+						<div class="meta-row">
+							<span class="meta-label">Stream</span>
+							<span class="meta-value">{selectedLog.stream}</span>
+						</div>
+						{#if selectedLog.isEvent}
+							<div class="meta-row">
+								<span class="meta-label">Event</span>
+								<span class="meta-value">{selectedLog.eventType}</span>
+							</div>
+						{/if}
+					</div>
+					<div class="details-message">
+						<div class="message-header">
+							<span>{jsonResult.isJson ? 'JSON' : 'Message'}</span>
+							<button class="copy-btn" class:copied={copyFeedback} onclick={() => copyToClipboard(jsonResult.isJson ? jsonResult.formatted : selectedLog!.message)}>
+								{copyFeedback ? 'Copied!' : 'Copy'}
+							</button>
+						</div>
+						<pre class="message-content" class:json={jsonResult.isJson}>{jsonResult.isJson ? jsonResult.formatted : selectedLog.message}</pre>
+					</div>
+					<div class="details-actions">
+						<button class="action-btn" onclick={() => filterByContainer(selectedLog!.containerId)}>Filter by this container</button>
+					</div>
+				</div>
 			</div>
-		{/each}
+		{/if}
 	</div>
 
 	<div class="status-bar">
@@ -544,6 +651,12 @@
 		cursor: pointer;
 	}
 
+	.log-area {
+		flex: 1;
+		display: flex;
+		overflow: hidden;
+	}
+
 	.log-container {
 		flex: 1;
 		overflow-y: auto;
@@ -555,15 +668,42 @@
 		grid-template-columns: auto auto auto 1fr;
 		gap: 1rem;
 		padding: 0.25rem 0.5rem;
+		border: none;
 		border-left: 3px solid var(--level-color);
 		margin-bottom: 2px;
 		background: var(--bg-secondary);
 		font-size: 0.8125rem;
 		line-height: 1.4;
+		width: 100%;
+		text-align: left;
+		cursor: pointer;
+		font-family: inherit;
+		color: inherit;
 	}
 
 	.log-entry:hover {
 		background: var(--bg-hover);
+	}
+
+	.log-entry.selected {
+		background: var(--bg-hover);
+		outline: 1px solid var(--color-accent);
+	}
+
+	.log-entry.event {
+		background: linear-gradient(90deg, var(--bg-secondary) 0%, rgba(var(--color-accent-rgb, 99, 102, 241), 0.1) 100%);
+		border-left-color: var(--color-accent);
+	}
+
+	.event-badge {
+		color: var(--color-accent);
+		text-transform: uppercase;
+		font-weight: 600;
+		font-size: 0.75rem;
+		min-width: 80px;
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
 	}
 
 	.timestamp {
@@ -590,6 +730,162 @@
 	.message {
 		color: var(--text-primary);
 		word-break: break-word;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	/* Details Panel */
+	.details-panel {
+		width: 400px;
+		min-width: 300px;
+		max-width: 50%;
+		background: var(--bg-secondary);
+		border-left: 1px solid var(--border-color);
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+
+	.details-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0.75rem 1rem;
+		border-bottom: 1px solid var(--border-color);
+	}
+
+	.details-header h3 {
+		margin: 0;
+		font-size: 0.875rem;
+		font-weight: 600;
+	}
+
+	.details-close {
+		background: none;
+		border: none;
+		color: var(--text-secondary);
+		cursor: pointer;
+		font-size: 1.25rem;
+		padding: 0.25rem;
+		line-height: 1;
+	}
+
+	.details-close:hover {
+		color: var(--text-primary);
+	}
+
+	.details-content {
+		flex: 1;
+		overflow-y: auto;
+		padding: 1rem;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.details-meta {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.meta-row {
+		display: flex;
+		gap: 1rem;
+		font-size: 0.8125rem;
+	}
+
+	.meta-label {
+		color: var(--text-secondary);
+		min-width: 80px;
+	}
+
+	.meta-value {
+		color: var(--text-primary);
+	}
+
+	.meta-value.container-value {
+		color: var(--color-accent);
+	}
+
+	.meta-value.level-value {
+		color: var(--level-color);
+		text-transform: uppercase;
+		font-weight: 600;
+	}
+
+	.details-message {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+	}
+
+	.message-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.5rem;
+		font-size: 0.75rem;
+		color: var(--text-secondary);
+	}
+
+	.copy-btn {
+		padding: 0.25rem 0.5rem;
+		background: var(--bg-primary);
+		border: 1px solid var(--border-color);
+		border-radius: 4px;
+		color: var(--text-secondary);
+		cursor: pointer;
+		font-size: 0.7rem;
+	}
+
+	.copy-btn:hover {
+		color: var(--text-primary);
+		background: var(--bg-hover);
+	}
+
+	.copy-btn.copied {
+		color: var(--color-success);
+		border-color: var(--color-success);
+	}
+
+	.message-content {
+		flex: 1;
+		margin: 0;
+		padding: 0.75rem;
+		background: var(--bg-primary);
+		border: 1px solid var(--border-color);
+		border-radius: 4px;
+		font-size: 0.75rem;
+		overflow: auto;
+		white-space: pre-wrap;
+		word-break: break-word;
+	}
+
+	.message-content.json {
+		color: var(--color-accent);
+	}
+
+	.details-actions {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.action-btn {
+		flex: 1;
+		padding: 0.5rem;
+		background: var(--bg-primary);
+		border: 1px solid var(--border-color);
+		border-radius: 4px;
+		color: var(--text-primary);
+		cursor: pointer;
+		font-size: 0.8125rem;
+	}
+
+	.action-btn:hover {
+		background: var(--bg-hover);
 	}
 
 	.status-bar {

@@ -23,12 +23,12 @@
 	let showSnapshotBrowser = $state(false);
 	let viewingSnapshot = $state<{ name: string; logs: LogEntry[] } | null>(null);
 
-	// Log batching - debounce updates to reduce re-renders (similar to Dozzle)
+	// Log batching - micro-batch for performance while staying responsive
 	let pendingLogs: LogEntry[] = [];
 	let flushTimer: ReturnType<typeof setTimeout> | null = null;
 	let lastFlush = 0;
-	const DEBOUNCE_MS = 250; // debounce interval
-	const MAX_WAIT_MS = 1000; // force flush after this long
+	const DEBOUNCE_MS = 50; // short debounce for snappy feel
+	const MAX_WAIT_MS = 150; // force flush quickly for real-time feel
 
 	function flushLogs() {
 		if (pendingLogs.length === 0) return;

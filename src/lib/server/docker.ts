@@ -18,9 +18,12 @@ export interface LogEntry {
 	stream: 'stdout' | 'stderr';
 	message: string;
 	level: LogLevel;
+	isEvent?: boolean;
+	eventType?: ContainerEventType;
 }
 
 export type LogLevel = 'debug' | 'info' | 'warning' | 'error' | 'alert';
+export type ContainerEventType = 'start' | 'stop' | 'restart' | 'die' | 'health_status' | 'create' | 'destroy';
 
 const LOG_LEVEL_PATTERNS: Record<LogLevel, RegExp[]> = {
 	alert: [/\balert\b/i, /\bcritical\b/i, /\bfatal\b/i, /\bemergency\b/i],
@@ -154,7 +157,7 @@ export async function* streamAllLogs(signal?: AbortSignal, containerIds?: string
 		} else {
 			await new Promise<void>((resolve) => {
 				resolveWait = resolve;
-				setTimeout(resolve, 1000);
+				setTimeout(resolve, 50); // Fast poll for responsive streaming
 			});
 		}
 	}
@@ -162,6 +165,102 @@ export async function* streamAllLogs(signal?: AbortSignal, containerIds?: string
 	for (const { stream } of streams) {
 		(stream as NodeJS.ReadableStream & { destroy?: () => void }).destroy?.();
 	}
+}
+
+const CONTAINER_EVENT_TYPES = new Set(['start', 'stop', 'restart', 'die', 'health_status', 'create', 'destroy']);
+
+function formatEventMessage(action: string, containerName: string, attributes: Record<string, string>): string {
+	switch (action) {
+		case 'start':
+			return `Container started`;
+		case 'stop':
+			return `Container stopped`;
+		case 'restart':
+			return `Container restarted`;
+		case 'die':
+			return `Container exited with code ${attributes.exitCode || 'unknown'}`;
+		case 'health_status':
+			return `Health status: ${attributes.health_status || 'unknown'}`;
+		case 'create':
+			return `Container created`;
+		case 'destroy':
+			return `Container destroyed`;
+		default:
+			return `Container event: ${action}`;
+	}
+}
+
+function getEventLevel(action: string, attributes: Record<string, string>): LogLevel {
+	switch (action) {
+		case 'die':
+			return attributes.exitCode === '0' ? 'info' : 'error';
+		case 'health_status':
+			return attributes.health_status === 'healthy' ? 'info' : 'warning';
+		case 'stop':
+		case 'destroy':
+			return 'warning';
+		case 'start':
+		case 'restart':
+		case 'create':
+			return 'info';
+		default:
+			return 'info';
+	}
+}
+
+export async function* streamContainerEvents(signal?: AbortSignal): AsyncGenerator<LogEntry> {
+	const eventStream = await docker.getEvents({
+		filters: {
+			type: ['container'],
+			event: Array.from(CONTAINER_EVENT_TYPES)
+		}
+	});
+
+	const eventQueue: LogEntry[] = [];
+	let resolveWait: (() => void) | null = null;
+
+	eventStream.on('data', (chunk: Buffer) => {
+		try {
+			const event = JSON.parse(chunk.toString());
+			if (event.Type === 'container' && CONTAINER_EVENT_TYPES.has(event.Action)) {
+				const containerName = event.Actor?.Attributes?.name || event.Actor?.ID?.slice(0, 12) || 'unknown';
+				const entry: LogEntry = {
+					timestamp: new Date(event.time * 1000),
+					container: containerName,
+					containerId: event.Actor?.ID || '',
+					stream: 'stdout',
+					message: formatEventMessage(event.Action, containerName, event.Actor?.Attributes || {}),
+					level: getEventLevel(event.Action, event.Actor?.Attributes || {}),
+					isEvent: true,
+					eventType: event.Action as ContainerEventType
+				};
+				eventQueue.push(entry);
+				if (resolveWait) {
+					resolveWait();
+					resolveWait = null;
+				}
+			}
+		} catch (err) {
+			console.error('Failed to parse Docker event:', err);
+		}
+	});
+
+	eventStream.on('error', (err) => {
+		console.error('Docker events stream error:', err);
+	});
+
+	while (!signal?.aborted) {
+		if (eventQueue.length > 0) {
+			yield eventQueue.shift()!;
+		} else {
+			await new Promise<void>((resolve) => {
+				resolveWait = resolve;
+				setTimeout(resolve, 50); // Fast poll for responsive streaming
+			});
+		}
+	}
+
+	(eventStream as NodeJS.ReadableStream & { destroy?: () => void }).destroy?.();
 }
 
 export async function ping(): Promise<boolean> {
