@@ -1,24 +1,25 @@
-FROM node:25-alpine AS builder
-
-WORKDIR /app
-
-# Build deps for native modules (better-sqlite3)
+# Build tools layer - cached separately
+FROM node:25-alpine AS base
 RUN apk add --no-cache python3 make g++
-
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
+# Dependencies layer - cached when lockfile unchanged
+FROM base AS deps
+WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY svelte.config.js vite.config.ts tsconfig.json ./
 RUN pnpm install --frozen-lockfile
 
-COPY . .
+# Build layer
+FROM deps AS builder
+WORKDIR /app
+COPY svelte.config.js vite.config.ts tsconfig.json ./
+COPY src ./src
+COPY static ./static
 RUN pnpm build
-
-# Production deps only (with native modules compiled)
 RUN pnpm prune --prod
 
+# Runtime layer - minimal
 FROM node:25-alpine AS runtime
-
 WORKDIR /app
 
 ENV NODE_ENV=production
