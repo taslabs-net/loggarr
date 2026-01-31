@@ -11,6 +11,7 @@
 [![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)](https://sqlite.org)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)](https://docker.com)
 [![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?logo=prometheus&logoColor=white)](https://prometheus.io)
+[![OpenCode](https://img.shields.io/badge/OpenCode-000000?logo=github&logoColor=white)](https://github.com/opencode-ai/opencode)
 
 A simple Docker log viewer. Streams logs from the Docker socket with basic filtering and capture capabilities.
 

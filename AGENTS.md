@@ -72,3 +72,43 @@ loggarr/
 ├── data/                       # SQLite database (runtime)
 └── tests/
 ```
+
+## Project Management
+
+- **Linear Project**: [Loggarr](https://linear.app/schenanigans/project/loggarr-e29b6227b714)
+- **Team**: Schenanigans
+
+## Documentation References
+
+### SvelteKit
+
+- **Docs**: https://svelte.dev/docs/kit/introduction
+- **Key Concepts**: Routing, Loading data, Form actions, Server-only modules
+- **Adapter**: `@sveltejs/adapter-node` for Docker deployment
+- **Environment**: Use `$env/dynamic/private` for runtime env vars
+
+### Dockerode (Docker API)
+
+- **Docs**: https://github.com/apocas/dockerode
+- **API Reference**: https://docs.docker.com/engine/api/latest/
+- **Key Methods**:
+  - `docker.listContainers()` - List all containers
+  - `container.logs()` - Stream container logs
+  - `docker.ping()` - Health check
+- **Stream Handling**: Use `docker.modem.demuxStream()` for stdout/stderr separation
+
+### Database (Current: better-sqlite3, Future: Drizzle ORM)
+
+- **better-sqlite3**: https://github.com/WiseLibs/better-sqlite3
+- **Drizzle ORM**: https://orm.drizzle.team/docs/overview
+- **Key Drizzle Features**:
+  - SQL-like query API
+  - TypeScript schema definitions
+  - Multi-database support (SQLite, PostgreSQL, MySQL)
+  - Automatic migrations with `drizzle-kit`
+
+### Prometheus Metrics
+
+- **Client**: `prom-client`
+- **Docs**: https://github.com/siimon/prom-client
+- **Endpoint**: `/api/metrics` (port 9091)
