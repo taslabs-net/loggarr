@@ -1,10 +1,6 @@
-# Build tools layer - cached separately
-FROM node:25-alpine AS base
-RUN apk add --no-cache python3 make g++
+# Dependencies layer - prebuilt binaries work on Debian
+FROM node:25-slim AS deps
 RUN npm install -g pnpm
-
-# Dependencies layer - cached when lockfile unchanged
-FROM base AS deps
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
@@ -19,7 +15,7 @@ RUN pnpm build
 RUN pnpm prune --prod
 
 # Runtime layer - minimal
-FROM node:25-alpine AS runtime
+FROM node:25-slim AS runtime
 WORKDIR /app
 
 ENV NODE_ENV=production
