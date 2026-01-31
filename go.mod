@@ -5,8 +5,10 @@ go 1.25.6
 require (
 	github.com/a-h/templ v0.3.977
 	github.com/caarlos0/env/v11 v11.3.1
-	github.com/docker/docker v27.0.0+incompatible
+	github.com/docker/docker v28.0.0+incompatible
 	github.com/labstack/echo/v4 v4.15.0
+	github.com/prometheus/client_golang v1.23.2
+	modernc.org/sqlite v1.44.3
 )
 
 require (
@@ -34,7 +36,6 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/prometheus/client_golang v1.23.2 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.66.1 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
@@ -59,5 +60,4 @@ require (
 	modernc.org/libc v1.67.6 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
-	modernc.org/sqlite v1.44.3 // indirect
 )
