@@ -5,13 +5,12 @@
 [![License: MIT](https://img.shields.io/github/license/taslabs-net/loggarr)](LICENSE)
 [![GitHub release](https://img.shields.io/github/v/release/taslabs-net/loggarr)](https://github.com/taslabs-net/loggarr/releases)
 
-[![Svelte](https://img.shields.io/badge/Svelte-FF3E00?logo=svelte&logoColor=white)](https://svelte.dev)
-[![Node.js](https://img.shields.io/badge/Node.js-339933?logo=node.js&logoColor=white)](https://nodejs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Go](https://img.shields.io/badge/Go-00ADD8?logo=go&logoColor=white)](https://go.dev)
+[![Echo](https://img.shields.io/badge/Echo-00ADD8?logo=go&logoColor=white)](https://echo.labstack.com)
+[![htmx](https://img.shields.io/badge/htmx-3366CC?logo=htmx&logoColor=white)](https://htmx.org)
 [![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)](https://sqlite.org)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)](https://docker.com)
 [![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?logo=prometheus&logoColor=white)](https://prometheus.io)
-[![OpenCode](https://img.shields.io/badge/OpenCode-000000?logo=github&logoColor=white)](https://github.com/anomalyco/opencode)
 
 A simple Docker log viewer. Streams logs from the Docker socket with basic filtering and capture capabilities.
 
@@ -27,7 +26,7 @@ A simple Docker log viewer. Streams logs from the Docker socket with basic filte
 - **Keyboard shortcuts** for power users (press `?` for help)
 - **SQLite storage** for saved snapshots and configuration (streaming logs are memory-only)
 - **Prometheus metrics** on port 9091
-- **Health check** endpoint at `/health`
+- **Health check** endpoint at `/api/health`
 
 <img width="1912" height="794" alt="image" src="https://github.com/user-attachments/assets/32adda50-4914-4e76-b9fd-ef471d363a32" />
 
@@ -76,21 +75,24 @@ Then open `http://localhost:9797` in your browser.
 
 ## Tech Stack
 
-- **Frontend**: Svelte (SvelteKit)
-- **Backend**: Node.js
-- **Database**: SQLite (PostgreSQL/MySQL planned)
-- **Real-time**: WebSocket/SSE
+- **Backend**: Go with Echo framework
+- **Frontend**: htmx + DaisyUI (no build step)
+- **Templates**: templ (type-safe Go templates)
+- **Database**: SQLite (pure Go, no CGO)
+- **Real-time**: Server-Sent Events (SSE)
 - **Registry**: GitHub Container Registry (ghcr.io)
+
+## API Documentation
+
+Swagger UI available at `/api/docs/index.html`
 
 ## Development
 
 ```bash
-pnpm install      # Install dependencies
-pnpm dev          # Start dev server
-pnpm build        # Build for production
-pnpm typecheck    # TypeScript checks
-pnpm lint         # ESLint
-pnpm test         # Run tests
+make dev          # Hot reload with Air
+make build        # Build binary
+make swagger      # Generate API docs
+make test         # Run tests
 ```
 
 ## License
