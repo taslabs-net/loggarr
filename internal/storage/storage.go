@@ -146,7 +146,7 @@ func (s *Storage) GetSnapshot(id int64) (*Snapshot, error) {
 	var containersJSON, levelsJSON, logsJSON string
 
 	err := s.db.QueryRow(
-		`SELECT id, name, description, created_at, log_count, containers, levels, logs FROM snapshots WHERE id = ?`,
+		`SELECT id, name, COALESCE(description, ''), created_at, log_count, containers, levels, logs FROM snapshots WHERE id = ?`,
 		id,
 	).Scan(&snap.ID, &snap.Name, &snap.Description, &snap.CreatedAt, &snap.LogCount, &containersJSON, &levelsJSON, &logsJSON)
 	if err == sql.ErrNoRows {
@@ -172,7 +172,7 @@ func (s *Storage) GetSnapshot(id int64) (*Snapshot, error) {
 // ListSnapshots returns all snapshots (without logs for efficiency)
 func (s *Storage) ListSnapshots() ([]Snapshot, error) {
 	rows, err := s.db.Query(
-		`SELECT id, name, description, created_at, log_count, containers, levels FROM snapshots ORDER BY created_at DESC`,
+		`SELECT id, name, COALESCE(description, ''), created_at, log_count, containers, levels FROM snapshots ORDER BY created_at DESC`,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list snapshots: %w", err)
