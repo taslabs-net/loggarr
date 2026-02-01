@@ -457,20 +457,30 @@ document.addEventListener("DOMContentLoaded", function () {
       content = JSON.stringify(logs, null, 2);
       filename = `loggarr-export-${timestamp}.json`;
       mimeType = "application/json";
-    } else {
-      // CSV format
-      const headers = ["timestamp", "container", "level", "message"];
-      const csvRows = [headers.join(",")];
+    } else if (format === "markdown") {
+      // Markdown format - good for LLM context
+      const lines = [
+        `# Loggarr Export`,
+        ``,
+        `**Exported:** ${new Date().toISOString()}`,
+        `**Log count:** ${logs.length}`,
+        ``,
+        `## Logs`,
+        ``,
+      ];
       logs.forEach((log) => {
-        const row = headers.map((h) => {
-          const val = (log[h] || "").toString().replace(/"/g, '""');
-          return `"${val}"`;
-        });
-        csvRows.push(row.join(","));
+        lines.push(
+          `### [${log.level.toUpperCase()}] [${log.timestamp}] ${log.container}`,
+        );
+        lines.push(``);
+        lines.push("```");
+        lines.push(log.message);
+        lines.push("```");
+        lines.push(``);
       });
-      content = csvRows.join("\n");
-      filename = `loggarr-export-${timestamp}.csv`;
-      mimeType = "text/csv";
+      content = lines.join("\n");
+      filename = `loggarr-export-${timestamp}.md`;
+      mimeType = "text/markdown";
     }
 
     // Trigger download
