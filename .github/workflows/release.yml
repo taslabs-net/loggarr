@@ -59,14 +59,6 @@ jobs:
         env:
           OUTPUT: CHANGELOG.md
 
-      - name: Commit version bump
-        if: steps.check_tag.outputs.exists == 'false'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git commit --allow-empty -m "chore: bump version to ${{ steps.version.outputs.version }}"
-          git push
-
       - name: Setup
         if: steps.check_tag.outputs.exists == 'false'
         uses: ./.github/actions/setup
