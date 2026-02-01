@@ -84,6 +84,22 @@ func (s *Storage) migrate() error {
 		}
 	}
 
+	// Add log_count column if it doesn't exist (migration for older databases)
+	err = s.db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('snapshots') WHERE name='log_count'`).Scan(&count)
+	if err != nil {
+		return fmt.Errorf("failed to check for log_count column: %w", err)
+	}
+	if count == 0 {
+		if _, err := s.db.Exec(`ALTER TABLE snapshots ADD COLUMN log_count INTEGER NOT NULL DEFAULT 0`); err != nil {
+			return fmt.Errorf("failed to add log_count column: %w", err)
+		}
+		// Backfill log_count from existing logs data
+		if _, err := s.db.Exec(`UPDATE snapshots SET log_count = json_array_length(logs) WHERE log_count = 0`); err != nil {
+			// Non-fatal: just log, the count will be 0 for old snapshots
+			fmt.Printf("warning: failed to backfill log_count: %v\n", err)
+		}
+	}
+
 	return nil
 }
 

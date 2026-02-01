@@ -445,7 +445,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
     try {
       const response = await fetch("/api/v1/snapshots");
-      const snapshots = await response.json();
+      const data = await response.json();
+      
+      // Handle error responses or non-array data
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to fetch snapshots");
+      }
+      
+      const snapshots = Array.isArray(data) ? data : [];
 
       if (snapshots.length === 0) {
         container.innerHTML = `
