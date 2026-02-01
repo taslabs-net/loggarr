@@ -4,8 +4,8 @@ node_modules/
 # VCS
 .jj/
 
-# AI tooling
-.claude/
+# AI tooling (keep local settings private)
+.claude/settings.local.json
 
 # Build outputs
 /.svelte-kit
