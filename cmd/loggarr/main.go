@@ -135,7 +135,7 @@ func main() {
 }
 
 func printBanner(cfg *config.Config) {
-	fmt.Println(`
+	fmt.Print(`
  _                                  
 | |    ___   __ _  __ _  __ _ _ __ _ __ 
 | |   / _ \ / _' |/ _' |/ _' | '__| '__|
