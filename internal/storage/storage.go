@@ -100,6 +100,28 @@ func (s *Storage) migrate() error {
 		}
 	}
 
+	// Add containers column if it doesn't exist (migration for older databases)
+	err = s.db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('snapshots') WHERE name='containers'`).Scan(&count)
+	if err != nil {
+		return fmt.Errorf("failed to check for containers column: %w", err)
+	}
+	if count == 0 {
+		if _, err := s.db.Exec(`ALTER TABLE snapshots ADD COLUMN containers TEXT NOT NULL DEFAULT '[]'`); err != nil {
+			return fmt.Errorf("failed to add containers column: %w", err)
+		}
+	}
+
+	// Add levels column if it doesn't exist (migration for older databases)
+	err = s.db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('snapshots') WHERE name='levels'`).Scan(&count)
+	if err != nil {
+		return fmt.Errorf("failed to check for levels column: %w", err)
+	}
+	if count == 0 {
+		if _, err := s.db.Exec(`ALTER TABLE snapshots ADD COLUMN levels TEXT NOT NULL DEFAULT '[]'`); err != nil {
+			return fmt.Errorf("failed to add levels column: %w", err)
+		}
+	}
+
 	return nil
 }
 
