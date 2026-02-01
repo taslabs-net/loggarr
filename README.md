@@ -25,13 +25,22 @@ A simple Docker log viewer. Streams logs from the Docker socket with basic filte
 - **Filter by log level** - alert, error, warning, info, debug
 - **Keyboard shortcuts** for power users (press `?` for help)
 - **SQLite storage** for saved snapshots and configuration (streaming logs are memory-only)
-- **Prometheus metrics** on port 9091
+- **Prometheus metrics** at `/api/metrics`
 - **Health check** endpoint at `/api/health`
 
 <img width="1912" height="794" alt="image" src="https://github.com/user-attachments/assets/32adda50-4914-4e76-b9fd-ef471d363a32" />
 
 ## Quick Start
 
+**Docker Hub:**
+```bash
+docker run -d \
+  -p 9797:9797 \
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  taslabs/loggarr:latest
+```
+
+**GitHub Container Registry:**
 ```bash
 docker run -d \
   -p 9797:9797 \
@@ -43,12 +52,13 @@ Then open `http://localhost:9797` in your browser.
 
 ## Configuration
 
-| Environment Variable | Default | Description                       |
-| -------------------- | ------- | --------------------------------- |
-| `PORT`               | `9797`  | Web UI port                       |
-| `METRICS_PORT`       | `9091`  | Prometheus metrics port           |
-| `LOG_BUFFER_SIZE`    | `100`   | Number of lines to keep in memory |
-| `LOG_BUFFER_MAX`     | `1000`  | Maximum configurable buffer size  |
+| Environment Variable | Default                    | Description                      |
+| -------------------- | -------------------------- | -------------------------------- |
+| `PORT`               | `9797`                     | Web UI port                      |
+| `LOG_BUFFER_MAX`     | `1000`                     | Maximum log lines in memory      |
+| `LOG_TAIL_LINES`     | `10`                       | Initial lines to load per container |
+| `DATA_DIR`           | `./data`                   | SQLite database directory        |
+| `DOCKER_SOCKET`      | `/var/run/docker.sock`     | Docker socket path               |
 
 ## Keyboard Shortcuts
 
@@ -80,7 +90,7 @@ Then open `http://localhost:9797` in your browser.
 - **Templates**: templ (type-safe Go templates)
 - **Database**: SQLite (pure Go, no CGO)
 - **Real-time**: Server-Sent Events (SSE)
-- **Registry**: GitHub Container Registry (ghcr.io)
+- **Registry**: Docker Hub + GitHub Container Registry
 
 ## API Documentation
 

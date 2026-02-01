@@ -1,6 +1,8 @@
+# Docker Hub: taslabs/loggarr:latest
+# GitHub Container Registry: ghcr.io/taslabs-net/loggarr:latest
 services:
   loggarr:
-    image: ghcr.io/taslabs-net/loggarr:latest
+    image: taslabs/loggarr:latest
     ports:
       - '9797:9797'
     volumes:
