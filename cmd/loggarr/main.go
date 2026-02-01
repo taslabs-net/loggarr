@@ -1,3 +1,10 @@
+// @title Loggarr API
+// @version 1.0
+// @description Docker container log viewer and aggregator
+// @license.name MIT
+// @license.url https://github.com/taslabs-net/loggarr/blob/main/LICENSE
+// @host localhost:9797
+// @BasePath /api
 package main
 
 import (
@@ -12,11 +19,14 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	echoSwagger "github.com/swaggo/echo-swagger"
 
 	"github.com/taslabs-net/loggarr/internal/config"
 	"github.com/taslabs-net/loggarr/internal/docker"
 	"github.com/taslabs-net/loggarr/internal/handlers"
 	"github.com/taslabs-net/loggarr/internal/storage"
+
+	_ "github.com/taslabs-net/loggarr/docs" // swagger docs
 )
 
 func main() {
@@ -89,6 +99,7 @@ func main() {
 	api := e.Group("/api")
 	api.GET("/health", healthHandler.Health)
 	api.GET("/metrics", handlers.MetricsHandler())
+	api.GET("/docs/*", echoSwagger.WrapHandler)
 
 	v1 := api.Group("/v1")
 	v1.GET("/logs", logsHandler.StreamLogs)

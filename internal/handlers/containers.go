@@ -19,6 +19,13 @@ func NewContainersHandler(dc *docker.Client) *ContainersHandler {
 }
 
 // ListContainers handles GET /api/v1/containers
+// @Summary List containers
+// @Description Get list of all Docker containers
+// @Tags containers
+// @Produce json
+// @Success 200 {array} models.Container
+// @Failure 500 {object} map[string]string
+// @Router /v1/containers [get]
 func (h *ContainersHandler) ListContainers(c echo.Context) error {
 	containers, err := h.dockerClient.ListContainers(c.Request().Context())
 	if err != nil {

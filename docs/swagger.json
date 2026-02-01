@@ -1,0 +1,457 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Docker container log viewer and aggregator",
+        "title": "Loggarr API",
+        "contact": {},
+        "license": {
+            "name": "MIT",
+            "url": "https://github.com/taslabs-net/loggarr/blob/main/LICENSE"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:9797",
+    "basePath": "/api",
+    "paths": {
+        "/health": {
+            "get": {
+                "description": "Check if the service and Docker are healthy",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.HealthResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.HealthResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/containers": {
+            "get": {
+                "description": "Get list of all Docker containers",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "containers"
+                ],
+                "summary": "List containers",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Container"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/logs": {
+            "get": {
+                "description": "Server-Sent Events stream of container logs. Returns HTML fragments for htmx, or JSON if Accept header requests it.",
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "logs"
+                ],
+                "summary": "Stream logs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Comma-separated container IDs or names",
+                        "name": "containers",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated log levels (alert,error,warning,info,debug)",
+                        "name": "levels",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "SSE stream of log entries",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/snapshots": {
+            "get": {
+                "description": "Get list of all saved log snapshots",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "snapshots"
+                ],
+                "summary": "List snapshots",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/storage.Snapshot"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Save a log snapshot",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "snapshots"
+                ],
+                "summary": "Save snapshot",
+                "parameters": [
+                    {
+                        "description": "Snapshot data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.SaveSnapshotRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/storage.Snapshot"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/snapshots/{id}": {
+            "get": {
+                "description": "Get a snapshot by ID including all logs",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "snapshots"
+                ],
+                "summary": "Get snapshot",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Snapshot ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/storage.Snapshot"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete a snapshot by ID",
+                "tags": [
+                    "snapshots"
+                ],
+                "summary": "Delete snapshot",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Snapshot ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "handlers.HealthResponse": {
+            "type": "object",
+            "properties": {
+                "docker": {
+                    "type": "boolean"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.SaveSnapshotRequest": {
+            "type": "object",
+            "properties": {
+                "containers": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "description": {
+                    "type": "string"
+                },
+                "levels": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "logs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.LogEntry"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.Container": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "image": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ContainerEventType": {
+            "type": "string",
+            "enum": [
+                "start",
+                "stop",
+                "restart",
+                "die",
+                "health_status",
+                "create",
+                "destroy"
+            ],
+            "x-enum-varnames": [
+                "EventStart",
+                "EventStop",
+                "EventRestart",
+                "EventDie",
+                "EventHealthStatus",
+                "EventCreate",
+                "EventDestroy"
+            ]
+        },
+        "models.LogEntry": {
+            "type": "object",
+            "properties": {
+                "container": {
+                    "type": "string"
+                },
+                "containerId": {
+                    "type": "string"
+                },
+                "eventType": {
+                    "$ref": "#/definitions/models.ContainerEventType"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "isEvent": {
+                    "type": "boolean"
+                },
+                "level": {
+                    "$ref": "#/definitions/models.LogLevel"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "stream": {
+                    "description": "\"stdout\" or \"stderr\"",
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.LogLevel": {
+            "type": "string",
+            "enum": [
+                "debug",
+                "info",
+                "warning",
+                "error",
+                "alert"
+            ],
+            "x-enum-varnames": [
+                "LogLevelDebug",
+                "LogLevelInfo",
+                "LogLevelWarning",
+                "LogLevelError",
+                "LogLevelAlert"
+            ]
+        },
+        "storage.Snapshot": {
+            "type": "object",
+            "properties": {
+                "containers": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "levels": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "log_count": {
+                    "type": "integer"
+                },
+                "logs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.LogEntry"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

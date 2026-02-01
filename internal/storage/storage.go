@@ -51,8 +51,9 @@ func (s *Storage) Close() error {
 	return s.db.Close()
 }
 
-// migrate creates the required tables
+// migrate creates the required tables and runs migrations
 func (s *Storage) migrate() error {
+	// Create table if it doesn't exist
 	schema := `
 		CREATE TABLE IF NOT EXISTS snapshots (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -67,8 +68,23 @@ func (s *Storage) migrate() error {
 
 		CREATE INDEX IF NOT EXISTS idx_snapshots_created_at ON snapshots(created_at DESC);
 	`
-	_, err := s.db.Exec(schema)
-	return err
+	if _, err := s.db.Exec(schema); err != nil {
+		return err
+	}
+
+	// Add description column if it doesn't exist (migration for older databases)
+	var count int
+	err := s.db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('snapshots') WHERE name='description'`).Scan(&count)
+	if err != nil {
+		return fmt.Errorf("failed to check for description column: %w", err)
+	}
+	if count == 0 {
+		if _, err := s.db.Exec(`ALTER TABLE snapshots ADD COLUMN description TEXT`); err != nil {
+			return fmt.Errorf("failed to add description column: %w", err)
+		}
+	}
+
+	return nil
 }
 
 // Snapshot represents a saved log state

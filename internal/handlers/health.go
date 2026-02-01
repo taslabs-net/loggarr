@@ -25,6 +25,13 @@ type HealthResponse struct {
 }
 
 // Health handles GET /api/health
+// @Summary Health check
+// @Description Check if the service and Docker are healthy
+// @Tags health
+// @Produce json
+// @Success 200 {object} HealthResponse
+// @Failure 503 {object} HealthResponse
+// @Router /health [get]
 func (h *HealthHandler) Health(c echo.Context) error {
 	dockerOK := false
 	if err := h.dockerClient.Ping(c.Request().Context()); err == nil {

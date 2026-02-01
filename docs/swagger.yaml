@@ -1,0 +1,309 @@
+basePath: /api
+definitions:
+  handlers.HealthResponse:
+    properties:
+      docker:
+        type: boolean
+      status:
+        type: string
+    type: object
+  handlers.SaveSnapshotRequest:
+    properties:
+      containers:
+        items:
+          type: string
+        type: array
+      description:
+        type: string
+      levels:
+        items:
+          type: string
+        type: array
+      logs:
+        items:
+          $ref: '#/definitions/models.LogEntry'
+        type: array
+      name:
+        type: string
+    type: object
+  models.Container:
+    properties:
+      id:
+        type: string
+      image:
+        type: string
+      name:
+        type: string
+      state:
+        type: string
+      status:
+        type: string
+    type: object
+  models.ContainerEventType:
+    enum:
+    - start
+    - stop
+    - restart
+    - die
+    - health_status
+    - create
+    - destroy
+    type: string
+    x-enum-varnames:
+    - EventStart
+    - EventStop
+    - EventRestart
+    - EventDie
+    - EventHealthStatus
+    - EventCreate
+    - EventDestroy
+  models.LogEntry:
+    properties:
+      container:
+        type: string
+      containerId:
+        type: string
+      eventType:
+        $ref: '#/definitions/models.ContainerEventType'
+      id:
+        type: string
+      isEvent:
+        type: boolean
+      level:
+        $ref: '#/definitions/models.LogLevel'
+      message:
+        type: string
+      stream:
+        description: '"stdout" or "stderr"'
+        type: string
+      timestamp:
+        type: string
+    type: object
+  models.LogLevel:
+    enum:
+    - debug
+    - info
+    - warning
+    - error
+    - alert
+    type: string
+    x-enum-varnames:
+    - LogLevelDebug
+    - LogLevelInfo
+    - LogLevelWarning
+    - LogLevelError
+    - LogLevelAlert
+  storage.Snapshot:
+    properties:
+      containers:
+        items:
+          type: string
+        type: array
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      levels:
+        items:
+          type: string
+        type: array
+      log_count:
+        type: integer
+      logs:
+        items:
+          $ref: '#/definitions/models.LogEntry'
+        type: array
+      name:
+        type: string
+    type: object
+host: localhost:9797
+info:
+  contact: {}
+  description: Docker container log viewer and aggregator
+  license:
+    name: MIT
+    url: https://github.com/taslabs-net/loggarr/blob/main/LICENSE
+  title: Loggarr API
+  version: "1.0"
+paths:
+  /health:
+    get:
+      description: Check if the service and Docker are healthy
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.HealthResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handlers.HealthResponse'
+      summary: Health check
+      tags:
+      - health
+  /v1/containers:
+    get:
+      description: Get list of all Docker containers
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Container'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List containers
+      tags:
+      - containers
+  /v1/logs:
+    get:
+      description: Server-Sent Events stream of container logs. Returns HTML fragments
+        for htmx, or JSON if Accept header requests it.
+      parameters:
+      - description: Comma-separated container IDs or names
+        in: query
+        name: containers
+        type: string
+      - description: Comma-separated log levels (alert,error,warning,info,debug)
+        in: query
+        name: levels
+        type: string
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE stream of log entries
+          schema:
+            type: string
+      summary: Stream logs
+      tags:
+      - logs
+  /v1/snapshots:
+    get:
+      description: Get list of all saved log snapshots
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/storage.Snapshot'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List snapshots
+      tags:
+      - snapshots
+    post:
+      consumes:
+      - application/json
+      description: Save a log snapshot
+      parameters:
+      - description: Snapshot data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.SaveSnapshotRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/storage.Snapshot'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Save snapshot
+      tags:
+      - snapshots
+  /v1/snapshots/{id}:
+    delete:
+      description: Delete a snapshot by ID
+      parameters:
+      - description: Snapshot ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete snapshot
+      tags:
+      - snapshots
+    get:
+      description: Get a snapshot by ID including all logs
+      parameters:
+      - description: Snapshot ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/storage.Snapshot'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get snapshot
+      tags:
+      - snapshots
+swagger: "2.0"

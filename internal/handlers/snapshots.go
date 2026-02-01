@@ -36,6 +36,13 @@ type SaveSnapshotRequest struct {
 }
 
 // ListSnapshots handles GET /api/v1/snapshots
+// @Summary List snapshots
+// @Description Get list of all saved log snapshots
+// @Tags snapshots
+// @Produce json
+// @Success 200 {array} storage.Snapshot
+// @Failure 500 {object} map[string]string
+// @Router /v1/snapshots [get]
 func (h *SnapshotsHandler) ListSnapshots(c echo.Context) error {
 	snapshots, err := h.storage.ListSnapshots()
 	if err != nil {
@@ -49,6 +56,16 @@ func (h *SnapshotsHandler) ListSnapshots(c echo.Context) error {
 }
 
 // GetSnapshot handles GET /api/v1/snapshots/:id
+// @Summary Get snapshot
+// @Description Get a snapshot by ID including all logs
+// @Tags snapshots
+// @Produce json
+// @Param id path int true "Snapshot ID"
+// @Success 200 {object} storage.Snapshot
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /v1/snapshots/{id} [get]
 func (h *SnapshotsHandler) GetSnapshot(c echo.Context) error {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -68,6 +85,16 @@ func (h *SnapshotsHandler) GetSnapshot(c echo.Context) error {
 }
 
 // SaveSnapshot handles POST /api/v1/snapshots
+// @Summary Save snapshot
+// @Description Save a log snapshot
+// @Tags snapshots
+// @Accept json
+// @Produce json
+// @Param request body SaveSnapshotRequest true "Snapshot data"
+// @Success 201 {object} storage.Snapshot
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /v1/snapshots [post]
 func (h *SnapshotsHandler) SaveSnapshot(c echo.Context) error {
 	var req SaveSnapshotRequest
 	if err := c.Bind(&req); err != nil {
@@ -100,6 +127,14 @@ func (h *SnapshotsHandler) SaveSnapshot(c echo.Context) error {
 }
 
 // DeleteSnapshot handles DELETE /api/v1/snapshots/:id
+// @Summary Delete snapshot
+// @Description Delete a snapshot by ID
+// @Tags snapshots
+// @Param id path int true "Snapshot ID"
+// @Success 204
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /v1/snapshots/{id} [delete]
 func (h *SnapshotsHandler) DeleteSnapshot(c echo.Context) error {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {

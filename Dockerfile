@@ -5,8 +5,9 @@ RUN apk add --no-cache git
 
 WORKDIR /app
 
-# Install templ
+# Install templ and swag
 RUN go install github.com/a-h/templ/cmd/templ@latest
+RUN go install github.com/swaggo/swag/cmd/swag@latest
 
 # Copy go mod files first for caching
 COPY go.mod go.sum ./
@@ -15,9 +16,10 @@ RUN go mod download
 # Copy source
 COPY . .
 
-# Generate templ and build
+# Generate templ, swagger docs, and build
 ARG VERSION=dev
 RUN templ generate
+RUN swag init -g cmd/loggarr/main.go -o docs
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-s -w -X github.com/taslabs-net/loggarr/internal/config.Version=${VERSION}" -o loggarr ./cmd/loggarr
 
 # Runtime stage - minimal

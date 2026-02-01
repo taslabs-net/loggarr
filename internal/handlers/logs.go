@@ -27,10 +27,14 @@ func NewLogsHandler(dc *docker.Client) *LogsHandler {
 }
 
 // StreamLogs handles GET /api/v1/logs - SSE endpoint
-// Returns HTML fragments for htmx, or JSON if Accept header requests it
-// Query params:
-//   - containers: comma-separated container IDs or names
-//   - levels: comma-separated log levels (alert,error,warning,info,debug)
+// @Summary Stream logs
+// @Description Server-Sent Events stream of container logs. Returns HTML fragments for htmx, or JSON if Accept header requests it.
+// @Tags logs
+// @Produce text/event-stream
+// @Param containers query string false "Comma-separated container IDs or names"
+// @Param levels query string false "Comma-separated log levels (alert,error,warning,info,debug)"
+// @Success 200 {string} string "SSE stream of log entries"
+// @Router /v1/logs [get]
 func (h *LogsHandler) StreamLogs(c echo.Context) error {
 	// Parse container filter
 	containersParam := c.QueryParam("containers")
