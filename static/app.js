@@ -3,6 +3,7 @@
 let paused = false;
 let logCount = 0;
 let pausedBuffer = [];
+let skippedCount = 0;
 let eventSource = null;
 let searchRegex = null;
 
@@ -80,21 +81,32 @@ document.addEventListener("DOMContentLoaded", function () {
   const saveBtn = document.getElementById("save-btn");
   window.togglePause = function () {
     paused = !paused;
-    pauseBtn.textContent = paused ? "Resume" : "Pause";
+    updatePauseButton();
     pauseBtn.classList.toggle("btn-primary", paused);
 
     // Show/hide save button
     if (paused) {
       saveBtn.classList.remove("hidden");
+      skippedCount = 0;
     } else {
       saveBtn.classList.add("hidden");
       if (pausedBuffer.length > 0) {
         pausedBuffer.forEach((html) => addLogEntry(html));
         pausedBuffer = [];
       }
+      skippedCount = 0;
     }
     updateLogCount();
   };
+
+  // Update pause button text with skipped count
+  function updatePauseButton() {
+    if (paused && skippedCount > 0) {
+      pauseBtn.textContent = `Resume (${skippedCount} skipped)`;
+    } else {
+      pauseBtn.textContent = paused ? "Resume" : "Pause";
+    }
+  }
 
   // Add a log entry to the container
   function addLogEntry(html) {
@@ -180,6 +192,8 @@ document.addEventListener("DOMContentLoaded", function () {
     eventSource.onmessage = function (e) {
       if (paused) {
         pausedBuffer.push(e.data);
+        skippedCount++;
+        updatePauseButton();
         updateLogCount();
       } else {
         addLogEntry(e.data);
@@ -201,6 +215,8 @@ document.addEventListener("DOMContentLoaded", function () {
     logContainer.innerHTML = "";
     logCount = 0;
     pausedBuffer = [];
+    skippedCount = 0;
+    updatePauseButton();
     updateLogCount();
     connectSSE();
   }
@@ -210,6 +226,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Keyboard shortcuts
   document.addEventListener("keydown", function (e) {
+    // Cmd+K / Ctrl+K opens container search from anywhere
+    if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      e.preventDefault();
+      openContainerSearch();
+      return;
+    }
+
     if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
 
     switch (e.key) {
@@ -538,4 +561,99 @@ document.addEventListener("DOMContentLoaded", function () {
       setTimeout(() => (btn.textContent = original), 1000);
     });
   };
+
+  // Container search modal (Cmd+K)
+  const searchModal = document.getElementById("search-modal");
+  const containerSearchInput = document.getElementById(
+    "container-search-input",
+  );
+  const searchResults = document.getElementById("container-search-results");
+  let searchSelectedIndex = 0;
+  let containerList = [];
+
+  function openContainerSearch() {
+    if (!searchModal) return;
+    // Get current container list from checkboxes
+    containerList = [];
+    document.querySelectorAll(".container-filter").forEach((cb) => {
+      const label = cb.closest("label");
+      const name = label ? label.textContent.trim() : cb.value;
+      containerList.push({ id: cb.value, name: name, checked: cb.checked });
+    });
+    containerSearchInput.value = "";
+    searchSelectedIndex = 0;
+    updateSearchResults("");
+    searchModal.showModal();
+    setTimeout(() => containerSearchInput.focus(), 50);
+  }
+
+  function fuzzyMatch(pattern, str) {
+    pattern = pattern.toLowerCase();
+    str = str.toLowerCase();
+    let patternIdx = 0;
+    for (let i = 0; i < str.length && patternIdx < pattern.length; i++) {
+      if (str[i] === pattern[patternIdx]) patternIdx++;
+    }
+    return patternIdx === pattern.length;
+  }
+
+  function updateSearchResults(query) {
+    const filtered = query
+      ? containerList.filter((c) => fuzzyMatch(query, c.name))
+      : containerList;
+    searchResults.innerHTML = "";
+    filtered.forEach((c, i) => {
+      const li = document.createElement("li");
+      const a = document.createElement("a");
+      a.className = i === searchSelectedIndex ? "active" : "";
+      a.innerHTML = `
+        <input type="checkbox" class="checkbox checkbox-sm" ${c.checked ? "checked" : ""} disabled/>
+        <span>${c.name}</span>
+      `;
+      a.onclick = () => toggleContainer(c.id);
+      li.appendChild(a);
+      searchResults.appendChild(li);
+    });
+  }
+
+  function toggleContainer(id) {
+    const cb = document.querySelector(`.container-filter[value="${id}"]`);
+    if (cb) {
+      cb.checked = !cb.checked;
+      cb.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    // Update local state
+    const container = containerList.find((c) => c.id === id);
+    if (container) container.checked = !container.checked;
+    updateSearchResults(containerSearchInput.value);
+  }
+
+  if (containerSearchInput) {
+    containerSearchInput.addEventListener("input", (e) => {
+      searchSelectedIndex = 0;
+      updateSearchResults(e.target.value);
+    });
+
+    containerSearchInput.addEventListener("keydown", (e) => {
+      const items = searchResults.querySelectorAll("li");
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        searchSelectedIndex = Math.min(
+          searchSelectedIndex + 1,
+          items.length - 1,
+        );
+        updateSearchResults(containerSearchInput.value);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        searchSelectedIndex = Math.max(searchSelectedIndex - 1, 0);
+        updateSearchResults(containerSearchInput.value);
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        const item = items[searchSelectedIndex];
+        if (item) item.querySelector("a").click();
+      } else if (e.key === "Escape") {
+        searchModal.close();
+      }
+    });
+  }
 });

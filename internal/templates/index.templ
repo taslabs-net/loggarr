@@ -64,7 +64,7 @@ templ Index(containers []models.Container, bufferMax int, version string) {
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
 							</svg>
 						</label>
-						<ul tabindex="0" class="dropdown-content z-10 menu p-2 shadow bg-base-200 rounded-box w-64 max-h-60 overflow-y-auto">
+						<ul tabindex="0" class="dropdown-content z-10 menu p-2 shadow bg-base-200 rounded-box w-72 max-h-96 overflow-y-auto flex-nowrap">
 							for _, c := range containers {
 								if c.State == "running" {
 									<li>
@@ -157,7 +157,8 @@ templ Index(containers []models.Container, bufferMax int, version string) {
 				<div class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
 					<kbd class="kbd kbd-sm">Space</kbd><span>Pause / Resume</span>
 					<kbd class="kbd kbd-sm">/</kbd><span>Focus search</span>
-					<kbd class="kbd kbd-sm">Esc</kbd><span>Clear search</span>
+					<kbd class="kbd kbd-sm">Cmd+K</kbd><span>Container search</span>
+					<kbd class="kbd kbd-sm">Esc</kbd><span>Clear search / Close</span>
 					<kbd class="kbd kbd-sm">j</kbd><span>Scroll down</span>
 					<kbd class="kbd kbd-sm">k</kbd><span>Scroll up</span>
 					<kbd class="kbd kbd-sm">G</kbd><span>Scroll to bottom</span>
@@ -168,6 +169,23 @@ templ Index(containers []models.Container, bufferMax int, version string) {
 				</div>
 				<div class="modal-action">
 					<button class="btn btn-sm" onclick="document.getElementById('help-modal').close()">Close</button>
+				</div>
+			</div>
+			<form method="dialog" class="modal-backdrop"><button>close</button></form>
+		</dialog>
+		<!-- Container Search Modal -->
+		<dialog id="search-modal" class="modal">
+			<div class="modal-box max-w-md">
+				<div class="flex items-center gap-2 mb-4">
+					<svg class="w-5 h-5 text-base-content/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+					</svg>
+					<input type="text" id="container-search-input" placeholder="Search containers..." class="input input-sm input-bordered flex-1" autocomplete="off"/>
+					<kbd class="kbd kbd-sm">Esc</kbd>
+				</div>
+				<ul id="container-search-results" class="menu menu-sm bg-base-200 rounded-box max-h-64 overflow-y-auto"></ul>
+				<div class="text-xs text-base-content/50 mt-2">
+					<kbd class="kbd kbd-xs">Up</kbd> <kbd class="kbd kbd-xs">Down</kbd> to navigate, <kbd class="kbd kbd-xs">Enter</kbd> to toggle, <kbd class="kbd kbd-xs">Esc</kbd> to close
 				</div>
 			</div>
 			<form method="dialog" class="modal-backdrop"><button>close</button></form>
