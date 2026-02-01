@@ -23,6 +23,54 @@ document.addEventListener("DOMContentLoaded", function () {
   const pauseBtn = document.getElementById("pause-btn");
   const searchInput = document.getElementById("search-input");
   const connectionStatus = document.getElementById("connection-status");
+  const searchClear = document.getElementById("search-clear");
+
+  // Theme Logic
+  const themeController = document.querySelector(".theme-controller");
+  const html = document.documentElement;
+  
+  // Init from local storage
+  const savedTheme = localStorage.getItem("theme") || "dark";
+  html.dataset.theme = savedTheme;
+  if (themeController) {
+      themeController.checked = savedTheme === "light";
+      
+      themeController.addEventListener("change", function() {
+          const theme = this.checked ? "light" : "dark";
+          html.dataset.theme = theme;
+          localStorage.setItem("theme", theme);
+      });
+  }
+
+  // Toast Notification System
+  window.showToast = function(message, type = "info") {
+      const container = document.getElementById("toast-container");
+      if (!container) return;
+      
+      const alertClass = {
+          "info": "alert-info",
+          "success": "alert-success",
+          "warning": "alert-warning",
+          "error": "alert-error"
+      }[type] || "alert-info";
+      
+      const el = document.createElement("div");
+      el.className = `alert ${alertClass} text-sm py-2 px-4 shadow-lg min-w-[200px] transition-all duration-300 opacity-0 translate-y-2`;
+      el.innerHTML = `<span>${escapeHtml(message)}</span>`;
+      
+      container.appendChild(el);
+      
+      // Animate in
+      requestAnimationFrame(() => {
+         el.classList.remove("opacity-0", "translate-y-2");
+      });
+      
+      // Remove after 3s
+      setTimeout(() => {
+          el.classList.add("opacity-0", "translate-y-[-10px]");
+          setTimeout(() => el.remove(), 300);
+      }, 3000);
+  };
 
   // Initialize container filters (all checked by default)
   document.querySelectorAll(".container-filter").forEach((checkbox) => {
@@ -69,13 +117,23 @@ document.addEventListener("DOMContentLoaded", function () {
           searchRegex = null;
           this.classList.add("input-error");
         }
+        if (searchClear) searchClear.classList.remove("hidden");
       } else {
         searchRegex = null;
         this.classList.remove("input-error");
+        if (searchClear) searchClear.classList.add("hidden");
       }
       applySearchFilter();
     }, 300);
   });
+
+  if (searchClear) {
+      searchClear.addEventListener("click", function() {
+          searchInput.value = "";
+          searchInput.dispatchEvent(new Event("input"));
+          searchInput.focus();
+      });
+  }
 
   // Toggle pause
   const saveBtn = document.getElementById("save-btn");
@@ -154,6 +212,17 @@ document.addEventListener("DOMContentLoaded", function () {
     const visible = logContainer.querySelectorAll(
       '.log-entry:not([style*="display: none"])',
     ).length;
+    
+    // Empty state logic
+    const emptyState = document.getElementById("empty-state");
+    if (emptyState) {
+        if (visible === 0) {
+            emptyState.classList.remove("hidden");
+        } else {
+            emptyState.classList.add("hidden");
+        }
+    }
+
     let text = visible + " logs";
     if (paused && pausedBuffer.length > 0) {
       text += " (+" + pausedBuffer.length + " paused)";
@@ -192,6 +261,10 @@ document.addEventListener("DOMContentLoaded", function () {
     eventSource.onmessage = function (e) {
       if (paused) {
         pausedBuffer.push(e.data);
+        // Prevent memory issues if paused for too long
+        if (pausedBuffer.length > BUFFER_MAX) {
+            pausedBuffer.shift();
+        }
         skippedCount++;
         updatePauseButton();
         updateLogCount();
@@ -312,7 +385,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const description = document.getElementById("snapshot-desc").value.trim();
 
     if (!name) {
-      alert("Please enter a name");
+      showToast("Please enter a name", "warning");
       return;
     }
 
@@ -348,47 +421,82 @@ document.addEventListener("DOMContentLoaded", function () {
       if (!response.ok) throw new Error("Failed to save");
 
       document.getElementById("save-modal").close();
+      showToast("Snapshot saved successfully", "success");
       loadSnapshots();
     } catch (err) {
-      alert("Failed to save snapshot: " + err.message);
+      showToast("Failed to save snapshot: " + err.message, "error");
     }
   };
 
+  // Snapshots Modal Logic
+  window.openSnapshotsModal = function() {
+      const modal = document.getElementById("snapshots-modal");
+      if (modal) {
+          modal.showModal();
+          loadSnapshots();
+      }
+  };
+
   window.loadSnapshots = async function () {
-    const list = document.getElementById("snapshots-list");
-    list.innerHTML =
-      '<li class="text-base-content/50 text-sm p-2">Loading...</li>';
+    const container = document.getElementById("snapshots-modal-content");
+    if (!container) return;
+    
+    container.innerHTML = '<div class="flex justify-center p-8"><span class="loading loading-spinner loading-lg"></span></div>';
 
     try {
       const response = await fetch("/api/v1/snapshots");
       const snapshots = await response.json();
 
       if (snapshots.length === 0) {
-        list.innerHTML =
-          '<li class="text-base-content/50 text-sm p-2">No snapshots saved</li>';
+        container.innerHTML = `
+            <div class="flex flex-col items-center justify-center h-full text-base-content/50">
+                <svg class="w-16 h-16 mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <p>No snapshots saved yet.</p>
+                <p class="text-sm mt-2">Pause the log stream to save a snapshot.</p>
+            </div>
+        `;
         return;
       }
 
-      list.innerHTML = snapshots
-        .map(
-          (s) => `
-				<li class="flex items-center justify-between hover:bg-base-300 rounded-lg">
-					<a class="flex-1 p-2 cursor-pointer" onclick="viewSnapshot(${s.id})">
-						<div class="font-medium text-sm">${escapeHtml(s.name)}</div>
-						<div class="text-xs text-base-content/50">${s.log_count} logs - ${new Date(s.created_at).toLocaleString()}</div>
-					</a>
-					<button class="btn btn-ghost btn-xs text-error" onclick="deleteSnapshot(${s.id})">
-						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-						</svg>
-					</button>
-				</li>
-			`,
-        )
-        .join("");
+      // Render Table
+      let html = `
+        <table class="table table-zebra w-full">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Created</th>
+                    <th>Logs</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+      `;
+      
+      html += snapshots.map(s => `
+        <tr class="hover">
+            <td class="font-medium">
+                <div class="font-bold">${escapeHtml(s.name)}</div>
+                ${s.description ? `<div class="text-xs opacity-60 truncate max-w-xs">${escapeHtml(s.description)}</div>` : ''}
+            </td>
+            <td class="text-sm opacity-70 whitespace-nowrap">${new Date(s.created_at).toLocaleString()}</td>
+            <td class="font-mono text-sm">${s.log_count}</td>
+            <td class="text-right">
+                <button class="btn btn-sm btn-ghost text-primary" onclick="viewSnapshot(${s.id})">Load</button>
+                <button class="btn btn-sm btn-ghost text-error" onclick="deleteSnapshot(${s.id})">Delete</button>
+            </td>
+        </tr>
+      `).join("");
+      
+      html += `</tbody></table>`;
+      container.innerHTML = html;
+
     } catch (err) {
-      list.innerHTML =
-        '<li class="text-error text-sm p-2">Failed to load snapshots</li>';
+      container.innerHTML = `
+        <div class="alert alert-error">
+            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <span>Failed to load snapshots: ${escapeHtml(err.message)}</span>
+        </div>
+      `;
     }
   };
 
@@ -431,20 +539,55 @@ document.addEventListener("DOMContentLoaded", function () {
       connectionStatus.innerHTML =
         '<span class="w-2 h-2 rounded-full bg-warning"></span> Viewing: ' +
         escapeHtml(snapshot.name);
+        
+      // Close modal
+      const modal = document.getElementById("snapshots-modal");
+      if (modal) modal.close();
+      
     } catch (err) {
-      alert("Failed to load snapshot: " + err.message);
+      showToast("Failed to load snapshot: " + err.message, "error");
     }
   };
 
-  window.deleteSnapshot = async function (id) {
-    if (!confirm("Delete this snapshot?")) return;
+  // Delete Snapshot Logic
+  let snapshotIdToDelete = null;
+  const deleteModal = document.getElementById("delete-modal");
+  const confirmDeleteBtn = document.getElementById("confirm-delete-btn");
 
-    try {
-      await fetch("/api/v1/snapshots/" + id, { method: "DELETE" });
-      loadSnapshots();
-    } catch (err) {
-      alert("Failed to delete: " + err.message);
-    }
+  if (confirmDeleteBtn) {
+      confirmDeleteBtn.addEventListener("click", async function() {
+          if (!snapshotIdToDelete) {
+             console.error("No snapshot ID to delete");
+             return;
+          }
+          
+          const btn = this;
+          const originalText = btn.textContent;
+          btn.textContent = "Deleting...";
+          btn.disabled = true;
+
+          try {
+              const response = await fetch("/api/v1/snapshots/" + snapshotIdToDelete, { method: "DELETE" });
+              if (!response.ok) {
+                  throw new Error(`HTTP error! status: ${response.status}`);
+              }
+              showToast("Snapshot deleted", "success");
+              loadSnapshots();
+              if (deleteModal) deleteModal.close();
+          } catch (err) {
+              console.error("Delete failed", err);
+              showToast("Failed to delete: " + err.message, "error");
+          } finally {
+              btn.textContent = originalText;
+              btn.disabled = false;
+              snapshotIdToDelete = null;
+          }
+      });
+  }
+
+  window.deleteSnapshot = function (id) {
+      snapshotIdToDelete = id;
+      if (deleteModal) deleteModal.showModal();
   };
 
   function escapeHtml(text) {
@@ -469,7 +612,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     if (logs.length === 0) {
-      alert("No logs to export");
+      showToast("No logs to export", "warning");
       return;
     }
 
@@ -519,9 +662,9 @@ document.addEventListener("DOMContentLoaded", function () {
   };
 
   // Load snapshots list on dropdown open (must be after loadSnapshots is defined)
-  document
-    .getElementById("snapshots-btn")
-    .addEventListener("click", loadSnapshots);
+  // document
+  //   .getElementById("snapshots-btn")
+  //   .addEventListener("click", loadSnapshots);
 
   // Log details modal
   window.showLogDetails = function (el) {
@@ -558,6 +701,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const btn = event.target;
       const original = btn.textContent;
       btn.textContent = "Copied!";
+      showToast("Log details copied to clipboard", "success");
       setTimeout(() => (btn.textContent = original), 1000);
     });
   };
