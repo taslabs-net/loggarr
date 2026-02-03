@@ -224,16 +224,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Helper function to highlight search matches
   function highlightMatches(text, regex) {
-    if (!regex || !text) return text;
+    if (!regex || !text) return escapeHtml(text);
     try {
+      // First escape HTML to prevent XSS
+      const escapedText = escapeHtml(text);
       // Clone the regex to avoid state issues, ensure global flag is set
       const flags = regex.flags || 'gi';
       const globalFlags = flags.includes('g') ? flags : flags + 'g';
       const globalRegex = new RegExp(regex.source, globalFlags);
       // Use the regex to find matches and wrap them in mark tags
-      return text.replace(globalRegex, (match) => `<mark class="bg-warning text-warning-content px-0.5 rounded">${match}</mark>`);
+      // Match is already escaped since it comes from escapedText
+      return escapedText.replace(globalRegex, (match) => `<mark class="bg-warning text-warning-content px-0.5 rounded">${match}</mark>`);
     } catch (e) {
-      return text;
+      return escapeHtml(text);
     }
   }
 
