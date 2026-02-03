@@ -103,24 +103,49 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  // Search input with debounce
+  // Search functionality with regex toggle
   let searchTimeout;
+  const regexToggle = document.getElementById("regex-toggle");
+  
+  function updateSearchPlaceholder() {
+    const isRegex = regexToggle && regexToggle.checked;
+    searchInput.placeholder = isRegex ? "Search (regex)..." : "Search text...";
+    searchInput.classList.toggle("input-primary", isRegex);
+  }
+  
+  if (regexToggle) {
+    regexToggle.addEventListener("change", updateSearchPlaceholder);
+    updateSearchPlaceholder();
+  }
+  
   searchInput.addEventListener("input", function () {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
       const pattern = this.value.trim();
+      const isRegex = regexToggle && regexToggle.checked;
+      
       if (pattern) {
-        try {
-          searchRegex = new RegExp(pattern, "i");
-          this.classList.remove("input-error");
-        } catch (e) {
-          searchRegex = null;
-          this.classList.add("input-error");
+        if (isRegex) {
+          try {
+            // Use 'gi' flags: global (match all) + case-insensitive
+            searchRegex = new RegExp(pattern, "gi");
+            this.classList.remove("input-error");
+            this.classList.add("input-success");
+          } catch (e) {
+            searchRegex = null;
+            this.classList.remove("input-success");
+            this.classList.add("input-error");
+          }
+        } else {
+          // Simple text search - escape regex special chars, use global flag
+          const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          searchRegex = new RegExp(escaped, "gi");
+          this.classList.remove("input-error", "input-success");
         }
         if (searchClear) searchClear.classList.remove("hidden");
       } else {
         searchRegex = null;
-        this.classList.remove("input-error");
+        this.classList.remove("input-error", "input-success");
         if (searchClear) searchClear.classList.add("hidden");
       }
       applySearchFilter();
@@ -171,11 +196,18 @@ document.addEventListener("DOMContentLoaded", function () {
     logContainer.insertAdjacentHTML("beforeend", html);
     const entry = logContainer.lastElementChild;
 
-    // Apply search filter if active
+    // Apply search filter and highlighting if active
     if (searchRegex && entry) {
       const message = entry.querySelector(".text-base-content.break-words");
-      if (message && !searchRegex.test(message.textContent)) {
-        entry.style.display = "none";
+      if (message) {
+        if (searchRegex.test(message.textContent)) {
+          entry.style.display = "";
+          // Store original and apply highlighting
+          message.dataset.originalText = message.textContent;
+          message.innerHTML = highlightMatches(message.textContent, searchRegex);
+        } else {
+          entry.style.display = "none";
+        }
       }
     }
 
@@ -190,19 +222,55 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // Apply search filter to existing entries
+  // Helper function to highlight search matches
+  function highlightMatches(text, regex) {
+    if (!regex || !text) return escapeHtml(text);
+    try {
+      // First escape HTML to prevent XSS
+      const escapedText = escapeHtml(text);
+      // Clone the regex to avoid state issues, ensure global flag is set
+      const flags = regex.flags || 'gi';
+      const globalFlags = flags.includes('g') ? flags : flags + 'g';
+      const globalRegex = new RegExp(regex.source, globalFlags);
+      // Use the regex to find matches and wrap them in mark tags
+      // Match is already escaped since it comes from escapedText
+      return escapedText.replace(globalRegex, (match) => `<mark class="bg-warning text-warning-content px-0.5 rounded">${match}</mark>`);
+    } catch (e) {
+      return escapeHtml(text);
+    }
+  }
+
+  // Helper function to remove highlighting
+  function removeHighlighting(element) {
+    if (!element) return;
+    // Replace all mark tags with their text content
+    element.innerHTML = element.innerHTML.replace(/<mark[^>]*>([^<]*)<\/mark>/g, '$1');
+  }
+
+  // Apply search filter to existing entries with highlighting
   function applySearchFilter() {
     const entries = logContainer.querySelectorAll(".log-entry");
     entries.forEach((entry) => {
+      const message = entry.querySelector(".text-base-content.break-words");
+      
       if (!searchRegex) {
         entry.style.display = "";
+        if (message) removeHighlighting(message);
         return;
       }
-      const message = entry.querySelector(".text-base-content.break-words");
+      
       if (message && searchRegex.test(message.textContent)) {
         entry.style.display = "";
+        // Store original text if not already stored
+        if (!message.dataset.originalText) {
+          message.dataset.originalText = message.textContent;
+        }
+        // Apply highlighting
+        const originalText = message.dataset.originalText;
+        message.innerHTML = highlightMatches(originalText, searchRegex);
       } else {
         entry.style.display = "none";
+        if (message) removeHighlighting(message);
       }
     });
   }
@@ -563,10 +631,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   if (confirmDeleteBtn) {
       confirmDeleteBtn.addEventListener("click", async function() {
-          if (!snapshotIdToDelete) {
-             console.error("No snapshot ID to delete");
-             return;
-          }
+          if (!snapshotIdToDelete) return;
           
           const btn = this;
           const originalText = btn.textContent;
@@ -582,7 +647,6 @@ document.addEventListener("DOMContentLoaded", function () {
               loadSnapshots();
               if (deleteModal) deleteModal.close();
           } catch (err) {
-              console.error("Delete failed", err);
               showToast("Failed to delete: " + err.message, "error");
           } finally {
               btn.textContent = originalText;
@@ -674,6 +738,10 @@ document.addEventListener("DOMContentLoaded", function () {
   //   .addEventListener("click", loadSnapshots);
 
   // Log details modal
+  const logDetailHighlight = document.getElementById("log-detail-highlight");
+  const logDetailMessage = document.getElementById("log-detail-message");
+  let originalLogMessage = "";
+  
   window.showLogDetails = function (el) {
     const modal = document.getElementById("log-modal");
     if (!modal) return;
@@ -688,11 +756,39 @@ document.addEventListener("DOMContentLoaded", function () {
       el.dataset.stream || "";
     document.getElementById("log-detail-level").textContent =
       el.dataset.level || "";
-    document.getElementById("log-detail-message").textContent =
-      el.dataset.message || "";
+    
+    // Store original message and apply highlighting if search is active
+    originalLogMessage = el.dataset.message || "";
+    updateLogDetailHighlight();
+    
+    // Show/hide highlight toggle based on whether search is active
+    if (logDetailHighlight) {
+      const highlightContainer = logDetailHighlight.closest(".label");
+      if (highlightContainer) {
+        highlightContainer.style.display = searchRegex ? "flex" : "none";
+      }
+    }
 
     modal.showModal();
   };
+  
+  // Update highlighting in log detail modal based on toggle state
+  function updateLogDetailHighlight() {
+    if (!logDetailMessage) return;
+    
+    if (searchRegex && logDetailHighlight && logDetailHighlight.checked) {
+      // Apply highlighting
+      logDetailMessage.innerHTML = highlightMatches(originalLogMessage, searchRegex);
+    } else {
+      // Show plain text
+      logDetailMessage.textContent = originalLogMessage;
+    }
+  }
+  
+  // Listen for toggle changes
+  if (logDetailHighlight) {
+    logDetailHighlight.addEventListener("change", updateLogDetailHighlight);
+  }
 
   window.copyLogDetails = function () {
     const time = document.getElementById("log-detail-time").textContent;
