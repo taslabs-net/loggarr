@@ -125,6 +125,25 @@ func (s *Storage) migrate() error {
 	return nil
 }
 
+// parseSQLiteTime parses datetime strings from SQLite (multiple formats supported)
+func parseSQLiteTime(s string) time.Time {
+	formats := []string{
+		"2006-01-02 15:04:05",       // SQLite CURRENT_TIMESTAMP
+		"2006-01-02T15:04:05Z",      // ISO 8601 UTC
+		"2006-01-02T15:04:05",       // ISO 8601 local
+		"2006-01-02 15:04:05.000",   // with milliseconds
+		"2006-01-02T15:04:05.000Z",  // ISO with milliseconds
+		time.RFC3339,                // full RFC3339
+		time.RFC3339Nano,            // RFC3339 with nanoseconds
+	}
+	for _, f := range formats {
+		if t, err := time.Parse(f, s); err == nil {
+			return t
+		}
+	}
+	return time.Time{} // zero time if all fail
+}
+
 // Snapshot represents a saved log state
 type Snapshot struct {
 	ID          int64             `json:"id"`
@@ -181,18 +200,20 @@ func (s *Storage) SaveSnapshot(name, description string, containers, levels []st
 // GetSnapshot retrieves a snapshot by ID (including logs)
 func (s *Storage) GetSnapshot(id int64) (*Snapshot, error) {
 	var snap Snapshot
-	var containersJSON, levelsJSON, logsJSON string
+	var containersJSON, levelsJSON, logsJSON, createdAtStr string
 
 	err := s.db.QueryRow(
 		`SELECT id, name, COALESCE(description, ''), created_at, log_count, containers, levels, logs FROM snapshots WHERE id = ?`,
 		id,
-	).Scan(&snap.ID, &snap.Name, &snap.Description, &snap.CreatedAt, &snap.LogCount, &containersJSON, &levelsJSON, &logsJSON)
+	).Scan(&snap.ID, &snap.Name, &snap.Description, &createdAtStr, &snap.LogCount, &containersJSON, &levelsJSON, &logsJSON)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get snapshot: %w", err)
 	}
+
+	snap.CreatedAt = parseSQLiteTime(createdAtStr)
 
 	if err := json.Unmarshal([]byte(containersJSON), &snap.Containers); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal containers: %w", err)
@@ -220,11 +241,14 @@ func (s *Storage) ListSnapshots() ([]Snapshot, error) {
 	var snapshots []Snapshot
 	for rows.Next() {
 		var snap Snapshot
-		var containersJSON, levelsJSON string
+		var containersJSON, levelsJSON, createdAtStr string
 
-		if err := rows.Scan(&snap.ID, &snap.Name, &snap.Description, &snap.CreatedAt, &snap.LogCount, &containersJSON, &levelsJSON); err != nil {
+		if err := rows.Scan(&snap.ID, &snap.Name, &snap.Description, &createdAtStr, &snap.LogCount, &containersJSON, &levelsJSON); err != nil {
 			return nil, fmt.Errorf("failed to scan snapshot: %w", err)
 		}
+
+		// Parse SQLite datetime string (modernc.org/sqlite doesn't auto-parse)
+		snap.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", createdAtStr)
 
 		if err := json.Unmarshal([]byte(containersJSON), &snap.Containers); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal containers: %w", err)
