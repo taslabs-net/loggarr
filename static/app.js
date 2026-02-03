@@ -516,7 +516,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (!paused) togglePause();
       logContainer.innerHTML = "";
 
-      // Render snapshot logs
+      // Render snapshot logs with full data attributes for filtering/searching
       snapshot.logs.forEach((log) => {
         // Sanitize level to prevent XSS via class injection
         const safeLevel = [
@@ -528,16 +528,52 @@ document.addEventListener("DOMContentLoaded", function () {
         ].includes(log.level)
           ? log.level
           : "info";
+        
+        // Build data attributes for detail modal and filtering
+        const containerId = escapeHtml(log.container_id || "");
+        const containerName = escapeHtml(log.container || "");
+        const timestamp = new Date(log.timestamp).toISOString();
+        const timeStr = new Date(log.timestamp).toLocaleTimeString();
+        const stream = log.stream || "stdout";
+        const message = escapeHtml(log.message);
+        
         const html = `
 					<div class="log-entry p-1 pl-2 mb-0.5 bg-base-200 grid grid-cols-[auto_auto_auto_1fr] gap-4 items-start level-${safeLevel}"
-						 data-container="${escapeHtml(log.container_id || "")}" data-level="${safeLevel}">
-						<span class="text-base-content/50 whitespace-nowrap">${new Date(log.timestamp).toLocaleTimeString()}</span>
-						<span class="text-primary whitespace-nowrap truncate max-w-32">${escapeHtml(log.container)}</span>
+						 data-container="${containerId}"
+						 data-container-name="${containerName}"
+						 data-level="${safeLevel}"
+						 data-time="${timeStr}"
+						 data-timestamp="${timestamp}"
+						 data-stream="${stream}"
+						 data-message="${message}"
+						 onclick="showLogDetails(this)">
+						<span class="text-base-content/50 whitespace-nowrap">${timeStr}</span>
+						<span class="text-primary whitespace-nowrap truncate max-w-32">${containerName}</span>
 						<span class="uppercase font-semibold text-xs min-w-16 level-${safeLevel}">${safeLevel}</span>
-						<span class="text-base-content break-words">${escapeHtml(log.message)}</span>
+						<span class="text-base-content break-words">${message}</span>
 					</div>
 				`;
         logContainer.insertAdjacentHTML("beforeend", html);
+        
+        // Apply search highlighting if active
+        const entry = logContainer.lastElementChild;
+        if (searchRegex && entry) {
+          const messageEl = entry.querySelector(".text-base-content.break-words");
+          if (messageEl && searchRegex.test(message)) {
+            messageEl.dataset.originalText = message;
+            messageEl.innerHTML = highlightMatches(message, searchRegex);
+          }
+        }
+        
+        // Apply container filter visibility
+        if (!filters.containers.has(containerId)) {
+          entry.style.display = "none";
+        }
+        
+        // Apply level filter visibility
+        if (!filters.levels.has(safeLevel)) {
+          entry.style.display = "none";
+        }
       });
 
       logCount = snapshot.logs.length;
