@@ -99,7 +99,7 @@ document.addEventListener("DOMContentLoaded", function () {
         this.classList.add(levelClass);
         this.classList.remove("btn-ghost");
       }
-      reconnectSSE();
+      reconnectSSE(true);
     });
   });
 
@@ -351,13 +351,26 @@ document.addEventListener("DOMContentLoaded", function () {
     };
   }
 
-  // Reconnect with new filters (clears logs)
-  function reconnectSSE() {
-    logContainer.innerHTML = "";
-    logCount = 0;
-    pausedBuffer = [];
-    skippedCount = 0;
-    updatePauseButton();
+  // Reconnect with new filters - preserves existing logs for container changes
+  function reconnectSSE(clearLogs = false) {
+    if (clearLogs) {
+      logContainer.innerHTML = "";
+      logCount = 0;
+      pausedBuffer = [];
+      skippedCount = 0;
+      updatePauseButton();
+    } else {
+      // Just update visibility of existing logs based on container filter
+      const entries = logContainer.querySelectorAll(".log-entry");
+      entries.forEach((entry) => {
+        const containerId = entry.dataset.container;
+        if (filters.containers.has(containerId)) {
+          entry.style.display = "";
+        } else {
+          entry.style.display = "none";
+        }
+      });
+    }
     updateLogCount();
     connectSSE();
   }
