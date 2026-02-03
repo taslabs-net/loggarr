@@ -47,7 +47,7 @@ func (h *SnapshotsHandler) ListSnapshots(c echo.Context) error {
 	snapshots, err := h.storage.ListSnapshots()
 	if err != nil {
 		log.Printf("error listing snapshots: %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to list snapshots"})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 	if snapshots == nil {
 		snapshots = []storage.Snapshot{}

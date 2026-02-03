@@ -226,15 +226,40 @@ document.addEventListener("DOMContentLoaded", function () {
   function highlightMatches(text, regex) {
     if (!regex || !text) return escapeHtml(text);
     try {
-      // First escape HTML to prevent XSS
-      const escapedText = escapeHtml(text);
       // Clone the regex to avoid state issues, ensure global flag is set
       const flags = regex.flags || 'gi';
       const globalFlags = flags.includes('g') ? flags : flags + 'g';
       const globalRegex = new RegExp(regex.source, globalFlags);
-      // Use the regex to find matches and wrap them in mark tags
-      // Match is already escaped since it comes from escapedText
-      return escapedText.replace(globalRegex, (match) => `<mark class="bg-warning text-warning-content px-0.5 rounded">${match}</mark>`);
+      
+      // Find all matches first (before escaping)
+      const matches = [];
+      let match;
+      while ((match = globalRegex.exec(text)) !== null) {
+        matches.push(match[0]);
+      }
+      
+      // If no matches, just return escaped text
+      if (matches.length === 0) {
+        return escapeHtml(text);
+      }
+      
+      // Split text by matches and escape each part
+      let result = '';
+      let lastIndex = 0;
+      
+      // Reset regex to iterate again
+      globalRegex.lastIndex = 0;
+      while ((match = globalRegex.exec(text)) !== null) {
+        // Add escaped text before match
+        result += escapeHtml(text.substring(lastIndex, match.index));
+        // Add highlighted (escaped) match
+        result += `<mark class="bg-warning text-warning-content px-0.5 rounded">${escapeHtml(match[0])}</mark>`;
+        lastIndex = match.index + match[0].length;
+      }
+      // Add remaining text
+      result += escapeHtml(text.substring(lastIndex));
+      
+      return result;
     } catch (e) {
       return escapeHtml(text);
     }
@@ -526,13 +551,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
     try {
       const response = await fetch("/api/v1/snapshots");
-      const data = await response.json();
       
-      // Handle error responses or non-array data
+      // Check if response is OK before trying to parse JSON
       if (!response.ok) {
-        throw new Error(data.error || "Failed to fetch snapshots");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server error: ${response.status}`);
       }
       
+      const data = await response.json();
+      
+      // Ensure data is an array
       const snapshots = Array.isArray(data) ? data : [];
 
       if (snapshots.length === 0) {
