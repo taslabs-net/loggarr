@@ -4,7 +4,7 @@ go 1.25.6
 
 require (
 	github.com/a-h/templ v0.3.977
-	github.com/caarlos0/env/v11 v11.3.1
+	github.com/caarlos0/env/v11 v11.4.0
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/labstack/echo/v4 v4.15.0
 	github.com/prometheus/client_golang v1.23.2
