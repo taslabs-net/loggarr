@@ -91,7 +91,7 @@ jobs:
 
       - name: Build and push Docker image
         if: steps.check_tag.outputs.exists == 'false'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
