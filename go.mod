@@ -8,7 +8,7 @@ require (
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/labstack/echo/v4 v4.15.1
 	github.com/prometheus/client_golang v1.23.2
-	github.com/swaggo/echo-swagger v1.5.0
+	github.com/swaggo/echo-swagger v1.5.2
 	github.com/swaggo/swag v1.16.6
 	modernc.org/sqlite v1.46.1
 )
@@ -39,7 +39,6 @@ require (
 	github.com/go-openapi/swag/typeutils v0.25.4 // indirect
 	github.com/go-openapi/swag/yamlutils v0.25.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/labstack/echo/v5 v5.0.3 // indirect
 	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
