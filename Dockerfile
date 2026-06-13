@@ -23,7 +23,7 @@ RUN swag init -g cmd/loggarr/main.go -o docs
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-s -w -X github.com/taslabs-net/loggarr/internal/config.Version=${VERSION}" -o loggarr ./cmd/loggarr
 
 # Runtime stage - minimal
-FROM alpine:3.23
+FROM alpine:3.24
 
 RUN apk add --no-cache ca-certificates tzdata
 
