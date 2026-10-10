@@ -3,7 +3,7 @@ module github.com/taslabs-net/loggarr
 go 1.26.0
 
 require (
-	github.com/a-h/templ v0.3.1020
+	github.com/a-h/templ v0.3.1070
 	github.com/caarlos0/env/v11 v11.4.1
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/labstack/echo/v4 v4.16.0
@@ -77,7 +77,7 @@ require (
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
-	golang.org/x/tools v0.50.0 // indirect
+	golang.org/x/tools v0.51.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
